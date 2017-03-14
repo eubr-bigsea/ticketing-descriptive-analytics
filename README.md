@@ -1,1 +1,1 @@
-# ticketing-descriptive-analytics
+# Descriptive analytics on ticketing data
