@@ -1,5 +1,5 @@
-import os, shutil, subprocess, csv, datetime 
-import numpy, netCDF4
+import os, shutil, subprocess, csv, datetime
+import numpy, netCDF4, matplotlib.pyplot as plt
 
 #Global lists of metrics being computed
 METRICS = ['MIN', 'MAX', 'AVG', 'SUM']
@@ -24,6 +24,7 @@ def convertNumtoASCII(inNum):
 		r = int(inNum%96)
 		#Concatenate char to string (add 32 removed in coding)
 		outString = outString + chr(r+32)
+		#Divide by one position	
 		inNum = int(inNum/96)
 
 	return outString[::-1]
@@ -186,4 +187,34 @@ def createNetCDFFile(filename, cod_linha, cod_veiculo, times, measure):
 	outnc.frequency = "hourly" 
 
 	outnc.close()
+
+def createSimplePlot(csvFile, plotName):
+
+	with open(csvFile, 'r') as outfile:
+		csvReader = csv.reader(outfile, delimiter=',', quotechar='"')
+		plot_data = numpy.full([3,24],numpy.nan, dtype=numpy.float32)
+		plot_dim = [i for i in range(24)]
+		plot_name = ['Saturday/Sunday', 'Monday/Friday', 'Tuesday/Wednesday/Thursday']
+		for row in csvReader:
+			for i, n in enumerate(plot_name):
+				if n in row[0]:
+					index = int((row[0].split(n +" ",1)[1]).split('-')[0]) 
+					plot_data[i][index] = float(row[4])
+
+		fig = plt.figure()
+		fig.set_size_inches(20, 10)
+		ax = plt.subplot(111)
+		ax.plot(plot_dim, plot_data[0], label=plot_name[0])
+		ax.plot(plot_dim, plot_data[1], label=plot_name[1])
+		ax.plot(plot_dim, plot_data[2], label=plot_name[2])
+		plt.grid()
+		plt.yticks(fontsize=14)
+		plt.xticks(plot_dim,fontsize=14)
+		handles, labels = ax.get_legend_handles_labels()
+		ax.legend(handles, labels, loc='upper right',fontsize=16)
+		plt.title("Total number of passengers per hour by day of week group",fontsize=22)
+		plt.xlabel("Hour of day",fontsize=18)
+		plt.ylabel("Number of passengers",fontsize=18)
+		#fig.savefig(plotName)
+		fig.show()
 

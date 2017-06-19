@@ -1,33 +1,25 @@
 import sys, time, json, numpy, calendar, datetime, os
 import multiprocessing
-
 from PyOphidia import cube, client
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import common_functions as common
 
 METRICS = ['MIN', 'MAX', 'AVG', 'SUM']
 
 #Functions for Ophidia aggregations
-def simpleAggregation(historicalCube, metric, parallelNcores):
-	return historicalCube.aggregate(group_size='all',operation=metric,ncores=parallelNcores)
+def simpleAggregation(startCube, metric, parallelNcores):
+	return startCube.aggregate(group_size='all',operation=metric,ncores=parallelNcores)
 
-def reducedAggregation(historicalCube, metric, spatialReduction, parallelNcores):
-	reducedCube = historicalCube.reduce2(dim='time',concept_level=spatialReduction,operation=metric,ncores=parallelNcores)
-	return reducedCube.aggregate(group_size='all',operation=metric,ncores=parallelNcores)
+def reducedAggregation(startCube, metric, spatialReduction, parallelNcores):
+	return startCube.reduce2(dim='time',concept_level=spatialReduction,operation=metric,ncores=parallelNcores)
 
-def totalAggregation(subsettedCube, metric, parallelNcores):
-	reducedCube = subsettedCube.reduce(group_size='all',operation=metric,ncores=parallelNcores)
-	return reducedCube.aggregate(group_size='all',operation=metric,ncores=parallelNcores)
+def totalAggregation(startCube, metric, parallelNcores):
+	return startCube.reduce(group_size='all',operation=metric,ncores=parallelNcores)
 
-def totalHourlyAggregation(subsettedCube, metric, parallelNcores):
-	reducedCube = subsettedCube.apply(query="oph_concat(oph_reduce(oph_get_subarray2(measure,'1:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'2:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'3:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'4:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'5:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'6:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'7:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'8:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'9:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'10:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'11:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'12:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'13:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'14:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'15:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'16:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'17:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'18:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'19:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'20:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'21:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'22:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'23:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'24:24:end'),'OPH_"+metric+"'))", check_type='no', measure_type='auto',ncores=parallelNcores)
-	return reducedCube.aggregate(group_size='all',operation=metric,ncores=parallelNcores)
-
-def fullHourlyAggregation(aggregatedCube, metric, parallelNcores):
-	reducedCube = aggregatedCube.apply(query="oph_concat(oph_reduce(oph_get_subarray2(measure,'1:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'2:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'3:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'4:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'5:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'6:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'7:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'8:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'9:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'10:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'11:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'12:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'13:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'14:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'15:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'16:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'17:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'18:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'19:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'20:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'21:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'22:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'23:24:end'),'OPH_"+metric+"'),oph_reduce(oph_get_subarray2(measure,'24:24:end'),'OPH_"+metric+"'))", check_type='no', measure_type='auto',ncores=parallelNcores)
-	mergedCube = reducedCube.merge(nmerge=0,ncores=1)
-	return mergedCube.aggregate(group_size='all',operation=metric,ncores=1)
+def totalHourlyAggregation(startCube, metric, parallelNcores):
+	reducedCube1 = startCube.apply(query="oph_concat('OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT','OPH_FLOAT',oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'1:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'3:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'5:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'7:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'9:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'11:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'13:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'15:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'17:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'19:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'21:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'23:24:end'),'OPH_"+metric+"'))", check_type='no', measure_type='manual',ncores=parallelNcores)
+	reducedCube2 = startCube.apply(query="oph_concat('OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT','OPH_FLOAT',oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'2:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'4:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'6:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'8:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'10:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'12:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'14:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'16:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'18:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'20:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'22:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'24:24:end'),'OPH_"+metric+"'))", check_type='no', measure_type='manual',ncores=parallelNcores)
+	return cube.Cube.mergecubes(cubes=reducedCube1.pid+'|'+reducedCube2.pid, ncores=parallelNcores)
 
 def aggregationFuncWrapper(args):
 	functionName = args[0]
@@ -35,9 +27,7 @@ def aggregationFuncWrapper(args):
 	del args[0]
 	args = tuple(args)
 
-	if functionName == "fullHourlyAggregation":
-		return fullHourlyAggregation(*args)
-	elif functionName == "totalHourlyAggregation":
+	if functionName == "totalHourlyAggregation":
 		return totalHourlyAggregation(*args)
 	elif functionName == "totalAggregation":
 		return totalAggregation(*args)
@@ -69,7 +59,6 @@ def buildValues(aggregation, cubeList, day):
 		else:
 			if(k['name'] == 'cod_linha'):
 				codLinhaData = k['values']
-
 		if aggregation == 'weekdays-lines' or aggregation == 'weekdaysets-lines':
 			dateData = [day]
 		else:
@@ -109,20 +98,23 @@ def buildValues(aggregation, cubeList, day):
 	return codLinhaData, dateData, passengerData
 
 
-def basicComputation(parallelNcores, singleNcores, historicalCube, format, aggregation, outputFolder):
+def basicComputation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder):
 	cubeList = []
 	if aggregation == 'weekly-lines':
 		pool = multiprocessing.Pool(processes=4)
-		cubeList = pool.map(aggregationFuncWrapper, [("reducedAggregation", historicalCube, m.lower(), 'w', parallelNcores) for m in METRICS])
+		cubeList = pool.map(aggregationFuncWrapper, [("reducedAggregation", startCube, m.lower(), 'w', parallelNcores) for m in METRICS])
 	elif aggregation == 'monthly-lines':
 		pool = multiprocessing.Pool(processes=4)
-		cubeList = pool.map(aggregationFuncWrapper, [("reducedAggregation", historicalCube, m.lower(), 'M', parallelNcores) for m in METRICS])
+		cubeList = pool.map(aggregationFuncWrapper, [("reducedAggregation", startCube, m.lower(), 'M', parallelNcores) for m in METRICS])
 	elif aggregation == 'daily-lines':
 		pool = multiprocessing.Pool(processes=4)
-		cubeList = pool.map(aggregationFuncWrapper, [("reducedAggregation", historicalCube, m.lower(), 'd', parallelNcores) for m in METRICS])
+		cubeList = pool.map(aggregationFuncWrapper, [("reducedAggregation", startCube, m.lower(), 'd', parallelNcores) for m in METRICS])
 	elif aggregation == 'hourly-lines':
 		pool = multiprocessing.Pool(processes=4)
-		cubeList = pool.map(aggregationFuncWrapper, [("simpleAggregation", historicalCube, m.lower(), parallelNcores) for m in METRICS])
+		cubeList = pool.map(aggregationFuncWrapper, [("simpleAggregation", startCube, m.lower(), parallelNcores) for m in METRICS])
+
+	pool.close()
+	pool.join()
 
 	#Get dimension and measure values
 	codLinhaData = None
@@ -138,7 +130,7 @@ def basicComputation(parallelNcores, singleNcores, historicalCube, format, aggre
 
 	return outFile
 
-def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, historicalCube, startDate, numDays, format, outputFolder):
+def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder):
 	#weekdays array
 	if aggregation == 'weekdays-hourly-lines': 
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
@@ -160,10 +152,13 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, historica
 		if not filter_list:
 			exit("ERROR: Subset filter creation")
 
-		subsettedCube = historicalCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='yes',ncores=singleNcores)  
+		subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='yes',ncores=singleNcores)  
 
 		pool = multiprocessing.Pool(processes=4)
 		cubeList = pool.map(aggregationFuncWrapper, [("totalHourlyAggregation", subsettedCube, m.lower(), parallelNcores) for m in METRICS])
+
+		pool.close()
+		pool.join()
 
 		#Get dimension and measure values
 		codLinhaData = None
@@ -185,7 +180,7 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, historica
 
 	return outFile
 
-def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, historicalCube, startDate, numDays, format, outputFolder):
+def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder):
 	#weekdays array
 	if aggregation == 'weekdays-lines': 
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
@@ -193,12 +188,14 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, hist
 		weekDays = ["Saturday/Sunday","Monday/Friday","Tuesday/Wednesday/Thursday"]
 		weekDaysId = [[6,7],[1,5],[2,3,4]]
 
+	#Aggregate at day level once
+	reducedCube = startCube.reduce2(dim='time',concept_level='d',operation='sum',ncores=parallelNcores)
+
 	for i, day in enumerate(weekDays):
 		#Build filter set 
 		filter_list = ""
 		if aggregation == 'weekdays-lines': 
 			filter_list = common.buildSubsetFilter(startDate, numDays, i+1) 
-
 		else:
 			for j in weekDaysId[i]:
 				filter_list = filter_list + common.buildSubsetFilter(startDate, numDays, j) + ","
@@ -208,10 +205,14 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, hist
 		if not filter_list:
 			exit("ERROR: Subset filter creation")
 
-		subsettedCube = historicalCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='yes',ncores=singleNcores)  
+		#Extract relevant days
+		subsettedCube = reducedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='yes',ncores=singleNcores)  
 
 		pool = multiprocessing.Pool(processes=4)
 		cubeList = pool.map(aggregationFuncWrapper, [("totalAggregation", subsettedCube, m.lower(), parallelNcores) for m in METRICS])
+
+		pool.close()
+		pool.join()
 
 		#Get dimension and measure values
 		codLinhaData = None
@@ -233,18 +234,22 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, hist
 
 	return outFile
 
-def peakhourAggregation(parallelNcores, singleNcores, aggregation, historicalCube, startDate, numDays, format, outputFolder):
+def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder):
 	#weekdays array
-	if aggregation == 'weekdays-peakhours': 		
+	if aggregation == 'weekdays-peakhours': 
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 	else:
 		weekDays = ["Saturday/Sunday","Monday/Friday","Tuesday/Wednesday/Thursday"]
 		weekDaysId = [[6,7],[1,5],[2,3,4]]
 
+	#Sum values on all lines once
+	mergedCube = startCube.merge(nmerge=0,ncores=1)
+	aggregatedCube = mergedCube.aggregate(group_size='all',operation='sum',ncores=1)
+
 	for i, day in enumerate(weekDays):
 		#Build filter set 
 		filter_list = ""
-		if aggregation == 'weekdays-peakhours': 		
+		if aggregation == 'weekdays-peakhours': 
 			filter_list = common.buildSubsetFilter(startDate, numDays, i+1) 
 		else:
 			for j in weekDaysId[i]:
@@ -255,11 +260,13 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, historicalCub
 		if not filter_list:
 			exit("ERROR: Subset filter creation")
 
-		subsettedCube = historicalCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='yes',ncores=singleNcores)  
-		aggregatedCube = subsettedCube.aggregate(group_size='all',operation='sum',ncores=singleNcores)
+		subsettedCube = aggregatedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='yes',ncores=singleNcores)  
 
 		pool = multiprocessing.Pool(processes=4)
-		cubeList = pool.map(aggregationFuncWrapper, [("fullHourlyAggregation", aggregatedCube, m.lower(), parallelNcores) for m in METRICS])
+		cubeList = pool.map(aggregationFuncWrapper, [("totalHourlyAggregation", subsettedCube, m.lower(), parallelNcores) for m in METRICS])
+
+		pool.close()
+		pool.join()
 
 		#Get dimension and measure values
 		codLinhaData = None
@@ -286,7 +293,7 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 
 	#Initialize
 	sys.stdout = open(os.devnull, 'w')
-	cube.Cube.setclient(user, password, hostname, port)	
+	cube.Cube.setclient(user, password, hostname, port)
 	sys.stdout = sys.__stdout__; 
 
 	#Get Historical cube PID from metadata
@@ -315,22 +322,27 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 		endDate = datetime.datetime.strptime(endDate, "%Y-%m-%d")
 
 	historicalCube = cube.Cube(pid=historicalCubePid)
+	aggregatedCube = simpleAggregation(historicalCube, 'sum', singleNcores)
 
 	#Subset on weekdays (monday is 0)
 	numDays = (endDate - startDate).days + 1
 	startDay = startDate.isoweekday()
 
 	if processing == 'hourly-lines' or processing == 'daily-lines' or processing == 'weekly-lines' or processing == 'monthly-lines':
-		outFile = basicComputation(parallelNcores, singleNcores, historicalCube, format, processing, outputFolder)
+		#Description: hourly/daily/weekly/monthly aggregated stats for each bus line and time range
+		outFile = basicComputation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder)
 	elif processing == 'weekdays-hourly-lines' or processing == 'weekdaysets-hourly-lines':
-		outFile = weekdayLinesAggregation(parallelNcores, singleNcores, processing, historicalCube, startDate, numDays, format, outputFolder)
+		#Description: hourly aggregated stats for each bus line and weekday or set of weekdays
+		outFile = weekdayLinesAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder)
 	elif processing == 'weekdays-lines' or processing == 'weekdaysets-lines':
-		outFile = weekdayLinesTotalAggregation(parallelNcores, singleNcores, processing, historicalCube, startDate, numDays, format, outputFolder)
+		#Description: daily aggregated stats for each bus line and weekday or set of weekdays
+		outFile = weekdayLinesTotalAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder)
 	elif processing == 'weekdays-peakhours' or processing == 'weekdaysets-peakhours':
-		outFile = peakhourAggregation(parallelNcores, singleNcores, processing, historicalCube, startDate, numDays, format, outputFolder)
+		#Description: hourly aggregated stats for each weekday or set of weekdays (on all lines)
+		outFile = peakhourAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder)
 	else:
 		print("Aggregation not recognized")
-		
+
 	#Remove tmp cubes
 	cube.Cube.client.submit("oph_delete cube=[container=bigsea;level=1|2|3|4|5|6]")
 	#cube.Cube.deletecontainer(container=str(sample_container), delete_type='physical', hidden='no')

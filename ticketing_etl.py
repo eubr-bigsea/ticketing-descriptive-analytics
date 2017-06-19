@@ -114,7 +114,7 @@ def loadOphidia(inputFile, times, singleNcores, user, password, hostname, port):
 	except:
 		pass
 
-	historicalCube = cube.Cube.importnc3(container='bigsea', measure='passengers', imp_dim='time', imp_concept_level='h', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False,ncores=singleNcores)
+	historicalCube = cube.Cube.importnc(container='bigsea', measure='passengers', imp_dim='time', imp_concept_level='h', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False,ncores=singleNcores)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='datacube_name',metadata_value='historical', display=False)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='start_date',metadata_value=str(times[0].date()), display=False)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='end_date',metadata_value=str(times[-1].date()), display=False)
