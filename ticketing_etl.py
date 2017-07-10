@@ -24,36 +24,34 @@ def aggregatePassengers(args):
 	return measure
 
 
-def extractFromFiles(inputFolder):
+from pycompss.api.constraint import constraint
+from pycompss.api.task import task
+from pycompss.api.parameter import *
+from pycompss.api.api import compss_wait_on
 
-	#Loop on input files
-	data = None
-	for e in sorted(os.listdir(inputFolder)):
-		inputFile = os.path.join(inputFolder, e)
-		if os.path.isfile(inputFile):
-			inFilename, inFileExt = os.path.splitext(inputFile)
-			if inFileExt == '.json':
-				print("Extract from \"" + e + "\"")
-				#Parse text to remove all empty lines
-				with open(inputFile, 'r') as f:
-					json_list = []
-					for line in f:
-						if line.strip():
-							json_list.append(str(line))
+@task(inputFolder=IN, inputName=IN, returns=pandas.DataFrame)
+def extractFromFiles(inputFolder, inputName):
 
-					json_text = "".join(json_list)
+	inputFile = os.path.join(inputFolder, inputName)
+	if os.path.isfile(inputFile):
+		inFilename, inFileExt = os.path.splitext(inputFile)
+		if inFileExt == '.json':
+			print("Extract from \"" + inputName + "\"")
+			#Parse text to remove all empty lines
+			with open(inputFile, 'r') as f:
+				json_list = []
+				for line in f:
+					if line.strip():
+						json_list.append(str(line))
 
-				#Convert from json to Pandas dataframe
-				newData = pandas.read_json(json_text, lines=False)
-				data = pandas.concat([data,newData])
+				json_text = "".join(json_list)
 
-	data.sort_values(['CODLINHA', 'NOMELINHA', 'CODVEICULO', 'DATAUTILIZACAO'], ascending=[True, True, True, True], inplace=True)
+			#Convert from json to Pandas dataframe
+			newData = pandas.read_json(json_text, lines=False)
 
-	line = data.values[:,0].flatten('F')
-	vehicle = data.values[:,1].flatten('F')
-	date = data.values[:,2].flatten('F')
+			return newData
 
-	return line, vehicle, date
+	return None
 
 
 def transformToNetCDF(x, y, t, outputFolder, multiProcesses):
@@ -86,8 +84,11 @@ def transformToNetCDF(x, y, t, outputFolder, multiProcesses):
 	measure = numpy.full([len(x),len(y),time_len],numpy.nan, dtype=numpy.float32)
 
 	#Aggregate times
-	pool = multiprocessing.Pool(processes=multiProcesses)
-	results = pool.map(aggregatePassengers, [(ar, time_val) for idx, ar in enumerate(sub_times)])
+	#pool = multiprocessing.Pool(processes=multiProcesses)
+	#results = pool.map(aggregatePassengers, [(ar, time_val) for idx, ar in enumerate(sub_times)])
+	results = []
+	for idx, ar in enumerate(sub_times):
+		results.append(aggregatePassengers((ar, time_val)))
 
 	for idx, ar in enumerate(sub_times):
 		x_index = (numpy.where(x==sub_x[idx])[0])

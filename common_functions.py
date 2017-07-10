@@ -49,41 +49,63 @@ def jsonLine2json(filename):
 	return outFileName
 
 
-def anonymizeFile(anonymizationBin, inputFile, policyFile):
+from pycompss.api.constraint import constraint
+from pycompss.api.task import task
+from pycompss.api.parameter import *
+from pycompss.api.api import compss_wait_on
 
-	try:
-		proc = subprocess.Popen(["java -jar " + anonymizationBin + " " + inputFile + " " + policyFile], cwd=os.path.dirname(os.path.abspath(__file__)), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-	except OSError:
-		print("Unable to run anonymization tool")
 
-	command_resp, command_error = proc.communicate()
-	if command_error:
-		print("Anonymization error:" + command_error)
+@task(anonymizationBin=IN, inputName=IN, inputFolder=IN, tmpFolder=IN, policyFile=IN, returns=str)
+def anonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, policyFile):
 
-	command_resp = command_resp.decode("utf-8")
+	inputFile = os.path.join(inputFolder, inputName)
+	if os.path.isfile(inputFile):
+		inFilename, inFileExt = os.path.splitext(inputFile)
+		if inFileExt == '.txt':
+			print("Anonymizing file: \"" + inputName + "\"")
+			newFile = jsonLine2json(inputFile)
 
-	if 'Anonymized document generated in: ' in command_resp:
-		anonymFile = command_resp.split("Anonymized document generated in: ",1)[1] 
-	else:
-		raise RuntimeError("Error in running anoymization")
+			try:
+				proc = subprocess.Popen(["java -jar " + anonymizationBin + " " + newFile + " " + policyFile], cwd=os.path.dirname(os.path.abspath(__file__)), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+			except OSError:
+				print("Unable to run anonymization tool")
 
-	return anonymFile
+			command_resp, command_error = proc.communicate()
+			if command_error:
+				print("Anonymization error:" + command_error)
+
+			command_resp = command_resp.decode("utf-8")
+
+			if 'Anonymized document generated in: ' in command_resp:
+				anonymFile = command_resp.split("Anonymized document generated in: ",1)[1] 
+			else:
+				raise RuntimeError("Error in running anoymization")
+
+			os.remove(newFile)
+			path, name = os.path.split(anonymFile)
+			outName = os.path.join(tmpFolder, name)
+			shutil.move(anonymFile, outName)
+
+			return outName
+
+	return None
 
 
 def createJSONFile(outputFolder, fileName, passengerData, codLinhaData, dateData, mode, keepNan):
 
 	jsonFile = os.path.join(outputFolder, fileName+'.json')
 	with open(jsonFile, mode) as outfile:
+		#Loop on bus lines
 		for l in range(0, len(passengerData[0])):
 			line = {}
 			if codLinhaData:
 				line['CODLINHA'] = convertNumtoASCII(int(codLinhaData[l]))
-
+			#Loop on time
 			for c in range(0, len(passengerData[0][l])):
 				line['DATETIME'] =  dateData[c]
 				#In case only nans do not add line to output	
 				stop_cond = 0
-
+				#Loop on measure
 				for i, m in enumerate(passengerData):
 					if keepNan == 0 and numpy.isnan(m[l][c]):
 						stop_cond = 1
@@ -112,8 +134,9 @@ def createCSVFile(outputFolder, fileName, passengerData, codLinhaData, dateData,
 
 			csvWriter.writerow(header)
 
+		#Loop on bus lines
 		for l in range(0, len(passengerData[0])):
-
+			#Loop on time
 			for c in range(0, len(passengerData[0][l])):
 				row = []
 				if codLinhaData:
@@ -121,7 +144,7 @@ def createCSVFile(outputFolder, fileName, passengerData, codLinhaData, dateData,
 				row.append(dateData[c])
 				#In case only nans do not add line to output	
 				stop_cond = 0
-
+				#Loop on measure
 				for i, m in enumerate(passengerData):
 					if keepNan == 0 and numpy.isnan(m[l][c]):
 						stop_cond = 1
@@ -212,9 +235,9 @@ def createSimplePlot(csvFile, plotName):
 		plt.xticks(plot_dim,fontsize=14)
 		handles, labels = ax.get_legend_handles_labels()
 		ax.legend(handles, labels, loc='upper right',fontsize=16)
-		plt.title("Total number of passengers per hour by day of week group",fontsize=22)
+		plt.title("Total number of passengers per hour by group of weekdays",fontsize=22)
 		plt.xlabel("Hour of day",fontsize=18)
 		plt.ylabel("Number of passengers",fontsize=18)
-		#fig.savefig(plotName)
-		fig.show()
+		fig.savefig(plotName)
+		#fig.show()
 
