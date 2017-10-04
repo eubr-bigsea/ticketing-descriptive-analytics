@@ -143,7 +143,7 @@ def complexAggregation(parallelNcores, singleNcores, aggregation, startCube, sta
 		exit("ERROR: Subset filter creation")
 
 	#Extract relevant days
-	subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='yes',ncores=singleNcores)  
+	subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)
 
 	cubeList = [0 for m in METRICS]
 	for i, m in enumerate(METRICS):

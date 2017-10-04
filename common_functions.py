@@ -164,7 +164,7 @@ def buildSubsetFilter(startDate, numDays, day):
 		if d.isoweekday() == day:
 			dayStart = d.replace(hour=00, minute=1)
 			dayEnd = dayStart + datetime.timedelta(days=1)
-			filterList = filterList + dayStart.strftime("%Y-%m-%d %H:%M:%S") + "_" + dayEnd.strftime("%Y-%m-%d %H:%M:%S") + ","
+			filterList = filterList + "{0:.3f}".format(netCDF4.date2num(dayStart, units = 'hours since 2015-1-1 00:00:00', calendar = 'gregorian')) + ":" + "{0:.3f}".format(netCDF4.date2num(dayEnd, units = 'hours since 2015-1-1 00:00:00', calendar = 'gregorian')) + ","
 
 	if not filterList:
 		return None 
