@@ -3,7 +3,8 @@ from PyOphidia import cube, client
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import common_functions as common
 
-METRICS = ['MIN', 'MAX', 'AVG', 'SUM']
+METRICS_BUS = ['MIN', 'MAX', 'AVG', 'SUM']
+METRICS_USER = ['MIN', 'MAX', 'COUNT', 'SUM']
 
 from pycompss.api.constraint import constraint
 from pycompss.api.task import task
@@ -43,9 +44,9 @@ def buildValues(aggregation, cubeList, day):
 		dataList.append(data)
 
 	#Get dimension and measure values
-	codLinhaData = None
+	mainDimData = None
 	dateData = None
-	passengerData = []
+	measureData = []
 	tmpDat = dataList[0]
 
 	if not tmpDat:
@@ -53,10 +54,18 @@ def buildValues(aggregation, cubeList, day):
 
 	for k in tmpDat['dimension']:
 		if aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours':
-			codLinhaData = ""
+			mainDimData = ""
+		elif aggregation == 'weekly-usage' or aggregation == 'monthly-usage':
+			import random
+			random.seed()
+			if(k['name'] == 'cod_passenger'):
+				mainDimData = k['values']
+				#Randomly generate ZIP codes
+				for i, v in enumerate(mainDimData):
+					mainDimData[i] = str(random.randint(0, 9999)*10).zfill(5) + "-" + str(random.randint(0, 99)*10).zfill(3)
 		else:
 			if(k['name'] == 'cod_linha'):
-				codLinhaData = k['values']
+				mainDimData = k['values']
 		if aggregation == 'weekdays-lines' or aggregation == 'weekdaysets-lines':
 			dateData = [day]
 		else:
@@ -69,7 +78,6 @@ def buildValues(aggregation, cubeList, day):
 					dateData = [datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").date().strftime("%Y") + " W" + str(datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").date().isocalendar()[1]) for m in k['values'] ]
 				elif aggregation == 'monthly-lines':
 					dateData = [datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").date().strftime("%Y-%m") for m in k['values'] ]
-
 				elif aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours':
 					dateData = [datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").time().strftime("%H") for m in k['values'] ]
 					for x,d in enumerate(dateData):
@@ -84,31 +92,35 @@ def buildValues(aggregation, cubeList, day):
 							dateData[x] = "24"
 
 					dateData = [day + " " + str(int(m)-1) + "-" + str(int(m)) for m in dateData ]
+				elif aggregation == 'weekly-usage':
+					dateData = [datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").date().strftime("%Y") + " W" + str(datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").date().isocalendar()[1]) for m in k['values'] ]
+				elif aggregation == 'monthly-usage':
+					dateData = [datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").date().strftime("%Y-%m") for m in k['values'] ]
 
 	for d in dataList:
 		for k in d['measure']:
-			if(k['name'] == 'passengers'):
-				passengerData.append(k['values'])
+			if(k['name'] == 'passengers' or k['name'] == 'usage'):
+				measureData.append(k['values'])
 
-	if codLinhaData == None or dateData == None or not passengerData:
+	if mainDimData == None or dateData == None or not measureData:
 		exit("ERROR: Variables not found")
 
-	return codLinhaData, dateData, passengerData
+	return mainDimData, dateData, measureData
 
 
-def basicComputation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port):
-	cubeList = [0 for m in METRICS]
+def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port):
+	cubeList = [0 for m in METRICS_BUS]
 	if aggregation == 'weekly-lines':
-		for i, m in enumerate(METRICS):
+		for i, m in enumerate(METRICS_BUS):
 			cubeList[i] = reducedAggregation(startCube, m.lower(), 'w', parallelNcores, user, pwd, host, port)
 	elif aggregation == 'monthly-lines':
-		for i, m in enumerate(METRICS):
+		for i, m in enumerate(METRICS_BUS):
 			cubeList[i] = reducedAggregation(startCube, m.lower(), 'M', parallelNcores, user, pwd, host, port)
 	elif aggregation == 'daily-lines':
-		for i, m in enumerate(METRICS):
+		for i, m in enumerate(METRICS_BUS):
 			cubeList[i] = reducedAggregation(startCube, m.lower(), 'd', parallelNcores, user, pwd, host, port)
 	elif aggregation == 'hourly-lines':
-		for i, m in enumerate(METRICS):
+		for i, m in enumerate(METRICS_BUS):
 			cubeList[i] = simpleAggregation(startCube, m.lower(), parallelNcores, user, pwd, host, port)
 
 	cubeList = compss_wait_on(cubeList)
@@ -121,58 +133,36 @@ def basicComputation(parallelNcores, singleNcores, startCube, format, aggregatio
 
 	#Build json file and array for plot
 	if format == 'json':
-		outFile = common.createJSONFile(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w', 0)
+		outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w', 0)
 	else:
-		outFile = common.createCSVFile(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w', 0)
+		outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w', 0)
 
 	return outFile
 
+def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port):
+	cubeList = [0 for m in METRICS_USER]
+	if aggregation == 'weekly-usage':
+		for i, m in enumerate(METRICS_USER):
+			cubeList[i] = reducedAggregation(startCube, m.lower(), 'w', parallelNcores, user, pwd, host, port)
+	elif aggregation == 'monthly-usage':
+		for i, m in enumerate(METRICS_USER):
+			cubeList[i] = reducedAggregation(startCube, m.lower(), 'M', parallelNcores, user, pwd, host, port)
 
-def complexAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, weekDaysId, idx, day, format, outputFolder, user, pwd, host, port):
-	#Build filter set 
-	filter_list = ""
-	if aggregation == 'weekdays-peakhours' or aggregation == 'weekdays-hourly-lines' or aggregation == 'weekdays-lines': 
-		filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
-	else:
-		for j in weekDaysId[idx]:
-			filter_list = filter_list + common.buildSubsetFilter(startDate, numDays, j) + ","
-
-		filter_list = filter_list[:-1]
-
-	if not filter_list:
-		exit("ERROR: Subset filter creation")
-
-	#Extract relevant days
-	subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)
-
-	cubeList = [0 for m in METRICS]
-	for i, m in enumerate(METRICS):
-		if aggregation == 'weekdays-lines' or aggregation == 'weekdaysets-lines':
-			cubeList[i] = totalAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port)
-		else:
-			cubeList[i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port)
 	cubeList = compss_wait_on(cubeList)
 
 	#Get dimension and measure values
-	codLinhaData = None
+	passengerData = None
 	dateData = None
-	passengerData = []
-	codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList, day)
+	usageData = []
+	passengerData, dateData, usageData = buildValues(aggregation, cubeList, None)
 
 	#Build json file and array for plot
-	if idx == 0:
-		if format == 'json':
-			outFile = common.createJSONFile(outputFolder, aggregation, passengerData, None if aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours' else codLinhaData, dateData, 'w', 1 if aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours' else 0)
-		else:
-			outFile = common.createCSVFile(outputFolder, aggregation, passengerData, None if aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours' else codLinhaData, dateData, 'w', 1 if aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours' else 0)
+	if format == 'json':
+		outFile = common.createJSONFilePassengerUsage(outputFolder, aggregation, usageData, passengerData, dateData, 'w', 0)
 	else:
-		if format == 'json':
-			outFile = common.createJSONFile(outputFolder, aggregation, passengerData, None if aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours' else codLinhaData, dateData, 'a', 1 if aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours' else 0)
-		else:
-			outFile = common.createCSVFile(outputFolder, aggregation, passengerData, None if aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours' else codLinhaData, dateData, 'a', 1 if aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours' else 0)
+		outFile = common.createCSVFilePassengerUsage(outputFolder, aggregation, usageData, passengerData, dateData, 'w', 0)
 
 	return outFile
-
 
 def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port):
 	#weekdays array
@@ -184,7 +174,38 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 		weekDaysId = [[6,7],[1,5],[2,3,4]]
 
 	for idx, day in enumerate(weekDays):
-		outFile = complexAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, weekDaysId, idx, day, format, outputFolder, user, pwd, host, port)
+		#Build filter set 
+		filter_list = ""
+		if aggregation == 'weekdays-hourly-lines': 
+			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
+		else:
+			for j in weekDaysId[idx]:
+				filter_list = filter_list + common.buildSubsetFilter(startDate, numDays, j) + ","
+
+			filter_list = filter_list[:-1]
+
+		if not filter_list:
+			exit("ERROR: Subset filter creation")
+
+		#Extract relevant days
+		subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
+
+		cubeList = [0 for m in METRICS_BUS]
+		for i, m in enumerate(METRICS_BUS):
+			cubeList[i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port)
+		cubeList = compss_wait_on(cubeList)
+
+		#Get dimension and measure values
+		codLinhaData = None
+		dateData = None
+		passengerData = []
+		codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList, day)
+
+		#Build json file and array for plot
+		if format == 'json':
+			outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+		else:
+			outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if idx == 0 else 'a', 0)
 
 	return outFile
 
@@ -201,7 +222,38 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 	reducedCube = startCube.reduce2(dim='time',concept_level='d',operation='sum',ncores=parallelNcores)
 
 	for idx, day in enumerate(weekDays):
-		outFile = complexAggregation(parallelNcores, singleNcores, aggregation, reducedCube, startDate, numDays, weekDaysId, idx, day, format, outputFolder, user, pwd, host, port)
+		#Build filter set 
+		filter_list = ""
+		if aggregation == 'weekdays-lines': 
+			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
+		else:
+			for j in weekDaysId[idx]:
+				filter_list = filter_list + common.buildSubsetFilter(startDate, numDays, j) + ","
+
+			filter_list = filter_list[:-1]
+
+		if not filter_list:
+			exit("ERROR: Subset filter creation")
+
+		#Extract relevant days
+		subsettedCube = reducedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
+
+		cubeList = [0 for m in METRICS_BUS]
+		for i, m in enumerate(METRICS_BUS):
+			cubeList[i] = totalAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port)
+		cubeList = compss_wait_on(cubeList)
+
+		#Get dimension and measure values
+		codLinhaData = None
+		dateData = None
+		passengerData = []
+		codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList, day)
+
+		#Build json file and array for plot
+		if format == 'json':
+			outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+		else:
+			outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
 
 	return outFile
 
@@ -219,7 +271,38 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 	aggregatedCube = mergedCube.aggregate(group_size='all',operation='sum',ncores=1)
 
 	for idx, day in enumerate(weekDays):
-		outFile = complexAggregation(parallelNcores, singleNcores, aggregation, aggregatedCube, startDate, numDays, weekDaysId, idx, day, format, outputFolder, user, pwd, host, port)
+		#Build filter set 
+		filter_list = ""
+		if aggregation == 'weekdays-peakhours': 
+			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
+		else:
+			for j in weekDaysId[idx]:
+				filter_list = filter_list + common.buildSubsetFilter(startDate, numDays, j) + ","
+
+			filter_list = filter_list[:-1]
+
+		if not filter_list:
+			exit("ERROR: Subset filter creation")
+
+		#Extract relevant days
+		subsettedCube = aggregatedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
+
+		cubeList = [0 for m in METRICS_BUS]
+		for i, m in enumerate(METRICS_BUS):
+			cubeList[i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port)
+		cubeList = compss_wait_on(cubeList)
+
+		#Get dimension and measure values
+		codLinhaData = None
+		dateData = None
+		passengerData = []
+		codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList, day)
+
+		#Build json file and array for plot
+		if format == 'json':
+			outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, None , dateData, 'w' if idx == 0 else 'a', 1)
+		else:
+			outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, None, dateData, 'w' if idx == 0 else 'a', 1)
 
 	return outFile
 
@@ -265,7 +348,7 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 
 	if processing == 'hourly-lines' or processing == 'daily-lines' or processing == 'weekly-lines' or processing == 'monthly-lines':
 		#Description: hourly/daily/weekly/monthly aggregated stats for each bus line and time range
-		outFile = basicComputation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port)
+		outFile = basicLineAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port)
 	elif processing == 'weekdays-hourly-lines' or processing == 'weekdaysets-hourly-lines':
 		#Description: hourly aggregated stats for each bus line and weekday or set of weekdays
 		outFile = weekdayLinesAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port)
@@ -275,6 +358,9 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 	elif processing == 'weekdays-peakhours' or processing == 'weekdaysets-peakhours':
 		#Description: hourly aggregated stats for each weekday or set of weekdays (on all lines)
 		outFile = peakhourAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port)
+	elif processing == 'weekly-usage' or processing == 'monthly-usage':
+		#Description: monthly aggregated stats for each bus user
+		outFile = basicPassengerAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port)
 	else:
 		print("Aggregation not recognized")
 

@@ -1,8 +1,9 @@
-import os, shutil, subprocess, csv, datetime
-import numpy, netCDF4, matplotlib.pyplot as plt
+import os, shutil, subprocess, csv, calendar, datetime
+import numpy, netCDF4
 
 #Global lists of metrics being computed
-METRICS = ['MIN', 'MAX', 'AVG', 'SUM']
+METRICS_BUS = ['MIN', 'MAX', 'AVG', 'SUM']
+METRICS_USER = ['MIN', 'MAX', 'COUNT', 'SUM']
 
 def convertASCIItoNum(inString):
 
@@ -49,49 +50,22 @@ def jsonLine2json(filename):
 	return outFileName
 
 
-from pycompss.api.constraint import constraint
-from pycompss.api.task import task
-from pycompss.api.parameter import *
-from pycompss.api.api import compss_wait_on
+def aggregateData(args):
+	ar = args[0]
+	time_val = args[1]
+	measure = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
+	time = [calendar.timegm(k.timetuple()) for k in ar]
+	for time_index in range(0,len(time_val)-1):
+		for t in time:
+			if t >= time_val[time_index] and t < time_val[time_index+1]: 
+				if not numpy.isnan(measure[time_index]):
+					measure[time_index] += 1
+				else:
+					measure[time_index] = 1
 
+	return measure
 
-@task(anonymizationBin=IN, inputName=IN, inputFolder=IN, tmpFolder=IN, policyFile=IN, returns=str)
-def anonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, policyFile):
-
-	inputFile = os.path.join(inputFolder, inputName)
-	if os.path.isfile(inputFile):
-		inFilename, inFileExt = os.path.splitext(inputFile)
-		if inFileExt == '.txt':
-			print("Anonymizing file: \"" + inputName + "\"")
-			newFile = jsonLine2json(inputFile)
-
-			try:
-				proc = subprocess.Popen(["java -jar " + anonymizationBin + " " + newFile + " " + policyFile], cwd=os.path.dirname(os.path.abspath(__file__)), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-			except OSError:
-				print("Unable to run anonymization tool")
-
-			command_resp, command_error = proc.communicate()
-			if command_error:
-				print("Anonymization error:" + command_error)
-
-			command_resp = command_resp.decode("utf-8")
-
-			if 'Anonymized document generated in: ' in command_resp:
-				anonymFile = command_resp.split("Anonymized document generated in: ",1)[1] 
-			else:
-				raise RuntimeError("Error in running anoymization")
-
-			os.remove(newFile)
-			path, name = os.path.split(anonymFile)
-			outName = os.path.join(tmpFolder, name)
-			shutil.move(anonymFile, outName)
-
-			return outName
-
-	return None
-
-
-def createJSONFile(outputFolder, fileName, passengerData, codLinhaData, dateData, mode, keepNan):
+def createJSONFileBusUsage(outputFolder, fileName, passengerData, codLinhaData, dateData, mode, keepNan):
 
 	jsonFile = os.path.join(outputFolder, fileName+'.json')
 	with open(jsonFile, mode) as outfile:
@@ -111,7 +85,7 @@ def createJSONFile(outputFolder, fileName, passengerData, codLinhaData, dateData
 						stop_cond = 1
 						break
 					else:
-						line[METRICS[i]] = round(m[l][c], 3)
+						line[METRICS_BUS[i]] = round(m[l][c], 3)
 						
 				if stop_cond == 0:
 					json.dump(line, outfile, sort_keys=True)
@@ -119,18 +93,46 @@ def createJSONFile(outputFolder, fileName, passengerData, codLinhaData, dateData
 
 	return jsonFile	
 
-def createCSVFile(outputFolder, fileName, passengerData, codLinhaData, dateData, mode, keepNan):
+def createJSONFilePassengerUsage(outputFolder, fileName, usageData, passengerData, dateData, mode, keepNan):
+
+	jsonFile = os.path.join(outputFolder, fileName+'.json')
+	with open(jsonFile, mode) as outfile:
+		#Loop on bus users
+		for l in range(0, len(usageData[0])):
+			line = {}
+			if passengerData:
+				line['ZIPCODE'] = passengerData[l]
+			#Loop on time
+			for c in range(0, len(usageData[0][l])):
+				line['DATETIME'] =  dateData[c]
+				#In case only nans do not add line to output	
+				stop_cond = 0
+				#Loop on measure
+				for i, m in enumerate(usageData):
+					if keepNan == 0 and numpy.isnan(m[l][c]):
+						stop_cond = 1
+						break
+					else:
+						line[METRICS_USER[i]] = round(m[l][c], 3)
+						
+				if stop_cond == 0:
+					json.dump(line, outfile, sort_keys=True)
+					outfile.write('\n')
+
+	return jsonFile	
+
+def createCSVFileBusUsage(outputFolder, fileName, passengerData, codLinhaData, dateData, mode, keepNan):
 
 	csvFile = os.path.join(outputFolder, fileName+'.csv')
 	with open(csvFile, mode) as outfile:
-		csvWriter = csv.writer(outfile, delimiter=',',quotechar='"', quoting=csv.QUOTE_MINIMAL)
+		csvWriter = csv.writer(outfile, delimiter=';',quotechar='"', quoting=csv.QUOTE_MINIMAL)
 		if mode == 'w':
 			header = []
 			if codLinhaData:
 				header.append("CODLINHA")
 			header.append("DATETIME")
 			for i in range(len(passengerData)):
-				header.append(METRICS[i])
+				header.append(METRICS_BUS[i])
 
 			csvWriter.writerow(header)
 
@@ -157,6 +159,44 @@ def createCSVFile(outputFolder, fileName, passengerData, codLinhaData, dateData,
 
 	return csvFile	
 
+def createCSVFilePassengerUsage(outputFolder, fileName,  usageData, passengerData, dateData, mode, keepNan):
+
+	csvFile = os.path.join(outputFolder, fileName+'.csv')
+	with open(csvFile, mode) as outfile:
+		csvWriter = csv.writer(outfile, delimiter=';',quotechar='"', quoting=csv.QUOTE_MINIMAL)
+		if mode == 'w':
+			header = []
+			if passengerData:
+				header.append("ZIPCODE")
+			header.append("DATETIME")
+			for i in range(len(usageData)):
+				header.append(METRICS_USER[i])
+
+			csvWriter.writerow(header)
+
+		#Loop on bus users
+		for l in range(0, len(usageData[0])):
+			#Loop on time
+			for c in range(0, len(usageData[0][l])):
+				row = []
+				if passengerData:
+					row.append(passengerData[l])
+				row.append(dateData[c])
+				#In case only nans do not add line to output	
+				stop_cond = 0
+				#Loop on measure
+				for i, m in enumerate(usageData):
+					if keepNan == 0 and numpy.isnan(m[l][c]):
+						stop_cond = 1
+						break
+					else:
+						row.append(round(m[l][c], 3))
+						
+				if stop_cond == 0:
+					csvWriter.writerow(row)
+
+	return csvFile	
+
 def buildSubsetFilter(startDate, numDays, day):
 
 	filterList = ""
@@ -172,7 +212,7 @@ def buildSubsetFilter(startDate, numDays, day):
 		return filterList[:-1]
 
 
-def createNetCDFFile(filename, cod_linha, cod_veiculo, times, measure):
+def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure):
 
 	outnc = netCDF4.Dataset(filename, 'w', format='NETCDF4')
 	time_dim = outnc.createDimension('time', len(times))
@@ -211,7 +251,47 @@ def createNetCDFFile(filename, cod_linha, cod_veiculo, times, measure):
 
 	outnc.close()
 
+def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, measure):
+
+	outnc = netCDF4.Dataset(filename, 'w', format='NETCDF4')
+	time_dim = outnc.createDimension('time', len(times))
+	passenger_dim = outnc.createDimension('cod_passenger', None) # None means unlimited
+	line_dim = outnc.createDimension('cod_linha', len(cod_linha)) 
+	time_var = outnc.createVariable('time', 'd', ('time',))
+	line_var = outnc.createVariable('cod_linha', numpy.int64, ('cod_linha',))
+	passenger_var = outnc.createVariable('cod_passenger', numpy.int64, ('cod_passenger',))
+
+	measure_var = outnc.createVariable('usage', numpy.float32, ('cod_passenger','cod_linha','time',), fill_value='NaN')
+
+	#Set metadata
+	time_var.units = 'hours since 2015-1-1 00:00:00' 
+	time_var.calendar = 'gregorian'
+	time_var.standard_name = 'time'
+	time_var.long_name = 'time'
+	time_var.axis = 'T'
+
+	line_var.axis = "Y" ;
+	passenger_var.axis = "X" ;
+
+	measure_var.standard_name = "usage"
+	measure_var.long_name = "Bus usage count"
+	measure_var.missing_value = "NaN"
+
+	time_var[:] = netCDF4.date2num(times, units = time_var.units, calendar = time_var.calendar)
+	line_var[:] = [convertASCIItoNum(str(t)) for t in cod_linha]
+	passenger_var[:] = [t for t in cod_passenger]
+	measure_var[:] = measure
+
+	#Add metadata
+	outnc.description = "Bus usage file"
+	outnc.cmor_version = "0.96f"
+	outnc.Conventions = "CF-1.0" 
+	outnc.frequency = "daily" 
+
+	outnc.close()
+
 def createSimplePlot(csvFile, plotName):
+	import matplotlib.pyplot as plt
 
 	with open(csvFile, 'r') as outfile:
 		csvReader = csv.reader(outfile, delimiter=',', quotechar='"')
