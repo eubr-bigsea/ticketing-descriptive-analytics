@@ -7,19 +7,16 @@ from PyOphidia import cube, client
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import common_functions as common
 
-from pycompss.api.constraint import constraint
-from pycompss.api.task import task
-from pycompss.api.parameter import *
-from pycompss.api.api import compss_wait_on
-
-
-def extractPhase(inputFiles, tmpFolder, procType):
+def extractPhase(inputFiles, tmpFolder, procType, mode):
 
 	#Loop on input files
 	data = [0 for m in range(0, len(inputFiles))]
 	for i, e in enumerate(inputFiles):
-		data[i] = extractFromFile(tmpFolder, e)
-	data = compss_wait_on(data)
+		data[i] = extractFromFile(tmpFolder, e, mode)
+
+	if mode == "compss":
+		from pycompss.api.api import compss_wait_on
+		data = compss_wait_on(data)
 
 	data = pandas.concat([d for d in data], ignore_index=True)
 
@@ -47,29 +44,14 @@ def extractPhase(inputFiles, tmpFolder, procType):
 
 	return outputData
 
-@task(inputFolder=IN, inputName=IN, returns=pandas.DataFrame)
-def extractFromFile(inputFolder, inputName):
+def extractFromFile(inputFolder, inputName, mode):
 
-	inputFile = os.path.join(inputFolder, inputName)
-	if os.path.isfile(inputFile):
-		inFilename, inFileExt = os.path.splitext(inputFile)
-		if inFileExt == '.json':
-			print("Extract from \"" + inputName + "\"")
-			#Parse text to remove all empty lines
-			with open(inputFile, 'r') as f:
-				json_list = []
-				for line in f:
-					if line.strip():
-						json_list.append(str(line))
-
-				json_text = "".join(json_list)
-
-			#Convert from json to Pandas dataframe
-			newData = pandas.read_json(json_text, lines=False)
-
-			return newData
-
-	return None
+	if mode == 'compss':
+		from compss_functions import compssExtractFromFile
+		return compssExtractFromFile(inputFolder, inputName)
+	else:
+		from internal_functions import internalExtractFromFile
+		return internalExtractFromFile(inputFolder, inputName)
 
 def transformToNetCDF(data, outputFolder, multiProcesses, procType):
 
@@ -170,6 +152,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType):
 		#Match extra attributes with unique users
 		#x = [p for p,v in enumerate(x)]
 		w = pandas.to_datetime(w, format='%d/%m/%y', errors='coerce')
+		w = [k if k < numpy.datetime64('2018-01-01') else k.replace(year=k.year-100) for k in w]
 		sub_w = [sw[0] for sw in numpy.split(w, numpy.where(diff_x)[0]+1)]
 		sub_z = [sz[0] for sz in numpy.split(z, numpy.where(diff_x)[0]+1)]
 		#Convert extra attributes to integer (when value is available)
@@ -203,7 +186,7 @@ def loadOphidia(inputFile, times, singleNcores, user, password, hostname, port, 
 
 	sys.stdout = open(os.devnull, 'w')
 
-	cube.Cube.setclient(user, password, hostname, port)
+	cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
 
 	try:
 		cube.Cube.createcontainer(container='bigsea',dim='cod_passenger|cod_linha|cod_veiculo|time',dim_type='long|long|long|double',hierarchy='oph_base|oph_base|oph_base|oph_time',display=False,base_time='2015-01-01 00:00:00',calendar='gregorian',units='h')

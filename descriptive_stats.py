@@ -6,34 +6,39 @@ import common_functions as common
 METRICS_BUS = ['MIN', 'MAX', 'AVG', 'SUM']
 METRICS_USER = ['MIN', 'MAX', 'COUNT', 'SUM']
 
-from pycompss.api.constraint import constraint
-from pycompss.api.task import task
-from pycompss.api.parameter import *
-from pycompss.api.api import compss_wait_on
-
 #Functions for Ophidia aggregations
-@task(startCube=IN, metric=IN, parallelNcores=IN, user=IN, pwd=IN, host=IN, port=IN, returns=cube.Cube)
-def simpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port):
-	cube.Cube.setclient(user, pwd, host, port)
-	return startCube.aggregate(group_size='all',operation=metric,ncores=parallelNcores)
+def simpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port, mode):
+	if mode == 'compss':
+		from compss_functions import compssSimpleAggregation
+		return compssSimpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
+	else:
+		from internal_functions import internalSimpleAggregation
+		return internalSimpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
 
-@task(startCube=IN, metric=IN, parallelNcores=IN, spatialReduction=IN, user=IN, pwd=IN, host=IN, port=IN, returns=cube.Cube)
-def reducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port):
-	cube.Cube.setclient(user, pwd, host, port)
-	return startCube.reduce2(dim='time',concept_level=spatialReduction,operation=metric,ncores=parallelNcores)
+def reducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, mode):
+	if mode == 'compss':
+		from compss_functions import compssReducedAggregation
+		return compssReducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port)
+	else:
+		from internal_functions import internalReducedAggregation
+		return internalReducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port)
 
-@task(startCube=IN, metric=IN, parallelNcores=IN, user=IN, pwd=IN, host=IN, port=IN, returns=cube.Cube)
-def totalAggregation(startCube, metric, parallelNcores, user, pwd, host, port):
-	cube.Cube.setclient(user, pwd, host, port)
-	return startCube.reduce(group_size='all',operation=metric,ncores=parallelNcores)
+def totalAggregation(startCube, metric, parallelNcores, user, pwd, host, port, mode):
+	if mode == 'compss':
+		from compss_functions import compssTotalAggregation
+		return compssTotalAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
+	else:
+		from internal_functions import internalTotalAggregation
+		return internalTotalAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
 
+def totalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port, mode):
+	if mode == 'compss':
+		from compss_functions import compssTotalHourlyAggregation
+		return compssTotalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
+	else:
+		from internal_functions import internalTotalHourlyAggregation
+		return internalTotalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
 
-@task(startCube=IN, metric=IN, parallelNcores=IN, user=IN, pwd=IN, host=IN, port=IN, returns=cube.Cube)
-def totalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port):
-	cube.Cube.setclient(user, pwd, host, port)
-	reducedCube1 = startCube.apply(query="oph_concat('OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT','OPH_FLOAT',oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'1:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'3:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'5:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'7:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'9:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'11:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'13:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'15:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'17:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'19:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'21:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'23:24:end'),'OPH_"+metric+"'))", check_type='no', measure_type='manual',ncores=parallelNcores)
-	reducedCube2 = startCube.apply(query="oph_concat('OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT','OPH_FLOAT',oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'2:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'4:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'6:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'8:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'10:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'12:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'14:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'16:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'18:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'20:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'22:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'24:24:end'),'OPH_"+metric+"'))", check_type='no', measure_type='manual',ncores=parallelNcores)
-	return cube.Cube.mergecubes(cubes=reducedCube1.pid+'|'+reducedCube2.pid, ncores=parallelNcores)
 
 def buildValues(aggregation, cubeList, day):
 
@@ -68,9 +73,9 @@ def buildValues(aggregation, cubeList, day):
 					if mainDimData[i] != 0:
 						tmp = str(mainDimData[i])
 						if mainDimData[i] > 0:
-							mainDimData[i] = [datetime.datetime.fromtimestamp(int(tmp[:-1])).strftime("%d-%m-%y"),"F" if int(tmp[-1:]) == 1 else "M"]
+							mainDimData[i] = [datetime.datetime.fromtimestamp(int(tmp[:-1])).strftime("%d.%m.%Y"),"F" if int(tmp[-1:]) == 1 else "M"]
 						else:
-							mainDimData[i] = [(datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=int(tmp[:-1]))).strftime("%d-%m-%y"),"F" if int(tmp[-1:]) == 1 else "M"]
+							mainDimData[i] = [(datetime.datetime(1970, 1, 2) + datetime.timedelta(seconds=int(tmp[:-1]))).strftime("%d.%m.%Y"),"F" if int(tmp[-1:]) == 1 else "M"]
 					else:		
 						mainDimData[i] = [numpy.nan, numpy.nan]
 		else:
@@ -118,22 +123,24 @@ def buildValues(aggregation, cubeList, day):
 	return mainDimData, dateData, measureData
 
 
-def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port):
+def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port, mode):
 	cubeList = [0 for m in METRICS_BUS]
 	if aggregation == 'weekly-lines':
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = reducedAggregation(startCube, m.lower(), 'w', parallelNcores, user, pwd, host, port)
+			cubeList[i] = reducedAggregation(startCube, m.lower(), 'w', parallelNcores, user, pwd, host, port, mode)
 	elif aggregation == 'monthly-lines':
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = reducedAggregation(startCube, m.lower(), 'M', parallelNcores, user, pwd, host, port)
+			cubeList[i] = reducedAggregation(startCube, m.lower(), 'M', parallelNcores, user, pwd, host, port, mode)
 	elif aggregation == 'daily-lines':
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = reducedAggregation(startCube, m.lower(), 'd', parallelNcores, user, pwd, host, port)
+			cubeList[i] = reducedAggregation(startCube, m.lower(), 'd', parallelNcores, user, pwd, host, port, mode)
 	elif aggregation == 'hourly-lines':
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = simpleAggregation(startCube, m.lower(), parallelNcores, user, pwd, host, port)
+			cubeList[i] = simpleAggregation(startCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
 
-	cubeList = compss_wait_on(cubeList)
+	if mode == "compss":
+		from pycompss.api.api import compss_wait_on
+		cubeList = compss_wait_on(cubeList)
 
 	#Get dimension and measure values
 	codLinhaData = None
@@ -149,16 +156,18 @@ def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggreg
 
 	return outFile
 
-def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port):
+def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port, mode):
 	cubeList = [0 for m in METRICS_USER]
 	if aggregation == 'weekly-usage':
 		for i, m in enumerate(METRICS_USER):
-			cubeList[i] = reducedAggregation(startCube, m.lower(), 'w', parallelNcores, user, pwd, host, port)
+			cubeList[i] = reducedAggregation(startCube, m.lower(), 'w', parallelNcores, user, pwd, host, port, mode)
 	elif aggregation == 'monthly-usage':
 		for i, m in enumerate(METRICS_USER):
-			cubeList[i] = reducedAggregation(startCube, m.lower(), 'M', parallelNcores, user, pwd, host, port)
+			cubeList[i] = reducedAggregation(startCube, m.lower(), 'M', parallelNcores, user, pwd, host, port, mode)
 
-	cubeList = compss_wait_on(cubeList)
+	if mode == "compss":
+		from pycompss.api.api import compss_wait_on
+		cubeList = compss_wait_on(cubeList)
 
 	#Get dimension and measure values
 	passengerData = None
@@ -174,7 +183,7 @@ def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, a
 
 	return outFile
 
-def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port):
+def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode):
 	#weekdays array
 	if aggregation == 'weekdays-hourly-lines': 
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
@@ -202,8 +211,10 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 
 		cubeList = [0 for m in METRICS_BUS]
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port)
-		cubeList = compss_wait_on(cubeList)
+			cubeList[i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
+		if mode == "compss":
+			from pycompss.api.api import compss_wait_on
+			cubeList = compss_wait_on(cubeList)
 
 		#Get dimension and measure values
 		codLinhaData = None
@@ -219,7 +230,7 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 
 	return outFile
 
-def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port):
+def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode):
 	#weekdays array
 	if aggregation == 'weekdays-lines': 
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
@@ -250,8 +261,10 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 
 		cubeList = [0 for m in METRICS_BUS]
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = totalAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port)
-		cubeList = compss_wait_on(cubeList)
+			cubeList[i] = totalAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
+		if mode == "compss":
+			from pycompss.api.api import compss_wait_on
+			cubeList = compss_wait_on(cubeList)
 
 		#Get dimension and measure values
 		codLinhaData = None
@@ -267,7 +280,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 
 	return outFile
 
-def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port):
+def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode):
 	#weekdays array
 	if aggregation == 'weekdays-peakhours': 
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
@@ -299,8 +312,10 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 
 		cubeList = [0 for m in METRICS_BUS]
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port)
-		cubeList = compss_wait_on(cubeList)
+			cubeList[i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
+		if mode == "compss":
+			from pycompss.api.api import compss_wait_on
+			cubeList = compss_wait_on(cubeList)
 
 		#Get dimension and measure values
 		codLinhaData = None
@@ -317,7 +332,7 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 	return outFile
 
 
-def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, processing, format, outputFolder, procType):
+def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, processing, format, outputFolder, procType, mode):
 
 	if procType == "busUsage":
 		measure = "passengers"
@@ -328,7 +343,7 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 
 	#Initialize
 	sys.stdout = open(os.devnull, 'w')
-	cube.Cube.setclient(user, password, hostname, port)
+	cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
 	sys.stdout = sys.__stdout__; 
 
 	#Get Historical cube PID from metadata
@@ -366,19 +381,19 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 
 	if processing == 'hourly-lines' or processing == 'daily-lines' or processing == 'weekly-lines' or processing == 'monthly-lines':
 		#Description: hourly/daily/weekly/monthly aggregated stats for each bus line and time range
-		outFile = basicLineAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port)
+		outFile = basicLineAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port, mode)
 	elif processing == 'weekdays-hourly-lines' or processing == 'weekdaysets-hourly-lines':
 		#Description: hourly aggregated stats for each bus line and weekday or set of weekdays
-		outFile = weekdayLinesAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port)
+		outFile = weekdayLinesAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port, mode)
 	elif processing == 'weekdays-lines' or processing == 'weekdaysets-lines':
 		#Description: daily aggregated stats for each bus line and weekday or set of weekdays
-		outFile = weekdayLinesTotalAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port)
+		outFile = weekdayLinesTotalAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port, mode)
 	elif processing == 'weekdays-peakhours' or processing == 'weekdaysets-peakhours':
 		#Description: hourly aggregated stats for each weekday or set of weekdays (on all lines)
-		outFile = peakhourAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port)
+		outFile = peakhourAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port, mode)
 	elif processing == 'weekly-usage' or processing == 'monthly-usage':
 		#Description: monthly aggregated stats for each bus user
-		outFile = basicPassengerAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port)
+		outFile = basicPassengerAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port, mode)
 	else:
 		print("Aggregation not recognized")
 
