@@ -101,7 +101,8 @@ def createJSONFilePassengerUsage(outputFolder, fileName, usageData, passengerDat
 		for l in range(0, len(usageData[0])):
 			line = {}
 			if passengerData:
-				line['ZIPCODE'] = passengerData[l]
+				line['BIRTHDATE'] = passengerData[l][0]
+				line['GENDER'] = passengerData[l][1]
 			#Loop on time
 			for c in range(0, len(usageData[0][l])):
 				line['DATETIME'] =  dateData[c]
@@ -167,7 +168,8 @@ def createCSVFilePassengerUsage(outputFolder, fileName,  usageData, passengerDat
 		if mode == 'w':
 			header = []
 			if passengerData:
-				header.append("ZIPCODE")
+				header.append("BIRTHDATE")
+				header.append("GENDER")
 			header.append("DATETIME")
 			for i in range(len(usageData)):
 				header.append(METRICS_USER[i])
@@ -180,7 +182,8 @@ def createCSVFilePassengerUsage(outputFolder, fileName,  usageData, passengerDat
 			for c in range(0, len(usageData[0][l])):
 				row = []
 				if passengerData:
-					row.append(passengerData[l])
+					row.append(passengerData[l][0])
+					row.append(passengerData[l][1])
 				row.append(dateData[c])
 				#In case only nans do not add line to output	
 				stop_cond = 0

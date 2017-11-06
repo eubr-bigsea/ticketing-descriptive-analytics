@@ -1,4 +1,4 @@
-import os, json, pandas, numpy, calendar, datetime
+import os, json, pandas, numpy, calendar, datetime, time
 import multiprocessing
 
 import sys
@@ -27,18 +27,20 @@ def extractPhase(inputFiles, tmpFolder, procType):
 	if procType == "busUsage":
 		data.sort_values(['CODLINHA', 'NOMELINHA', 'CODVEICULO', 'DATAUTILIZACAO'], ascending=[True, True, True, True], inplace=True)
 
-		line = data.values[:,0].flatten('F')
-		vehicle = data.values[:,1].flatten('F')
-		time = data.values[:,2].flatten('F')
+		line = data['CODLINHA'].values.flatten('F')
+		vehicle = data['CODVEICULO'].values.flatten('F')
+		time = data['DATAUTILIZACAO'].values.flatten('F')
 		outputData = [line, vehicle, time]
 
 	elif procType == "passengerUsage":
 		data.sort_values(['NUMEROCARTAO', 'CODLINHA', 'NOMELINHA', 'CODVEICULO', 'DATAUTILIZACAO'], ascending=[True, True, True, True, True], inplace=True)
 
-		line = data.values[:,0].flatten('F')
-		time = data.values[:,2].flatten('F')
-		number = data.values[:,4].flatten('F')
-		outputData = [number, line, time]
+		line = data['CODLINHA'].values.flatten('F')
+		time = data['DATAUTILIZACAO'].values.flatten('F')
+		number = data['NUMEROCARTAO'].values.flatten('F')
+		birthDate = data['DATANASCIMENTO'].values.flatten('F')
+		gender = data['SEXO'].values.flatten('F')
+		outputData = [number, line, time, birthDate, gender]
 
 	else:
 		raise RuntimeError("Type of processing not recognized")
@@ -125,6 +127,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType):
 		x = data[0]
 		y = data[1]
 		t = data[2]
+		w = data[3]
+		z = data[4]
 
 		diff_y = [y[i] != y[i+1] for i in range(0,len(y)-1)]
 		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
@@ -163,8 +167,17 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType):
 			y_index = (numpy.where(y==sub_y[idx])[0])
 			measure[x_index, y_index, :] = results[idx]
 
-		#Replace hash value with its position
-		x = [p for p,v in enumerate(x)]
+		#Match extra attributes with unique users
+		#x = [p for p,v in enumerate(x)]
+		w = pandas.to_datetime(w, format='%d/%m/%y', errors='coerce')
+		sub_w = [sw[0] for sw in numpy.split(w, numpy.where(diff_x)[0]+1)]
+		sub_z = [sz[0] for sz in numpy.split(z, numpy.where(diff_x)[0]+1)]
+		#Convert extra attributes to integer (when value is available)
+		for p,v in enumerate(x):
+			if sub_w[p] is not pandas.NaT:
+				x[p] = int(str(int(time.mktime(sub_w[p].timetuple()))) + str(1 if sub_z[p] == "F" else 2))
+			else:		
+				x[p] = 0
 
 		#Create NetCDF file
 		start_time = datetime.datetime.strptime(datetime.datetime.utcfromtimestamp(time_val[0]).strftime('%Y-%m-%d %H:%M:%S'), "%Y-%m-%d %H:%M:%S")
@@ -198,7 +211,7 @@ def loadOphidia(inputFile, times, singleNcores, user, password, hostname, port, 
 		pass
 
 	historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False,ncores=singleNcores)
-	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='datacube_name',metadata_value='historical', display=False)
+	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='datacube_name',metadata_value='historical_'+measure, display=False)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='start_date',metadata_value=str(times[0].date()), display=False)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='end_date',metadata_value=str(times[-1].date()), display=False)
 

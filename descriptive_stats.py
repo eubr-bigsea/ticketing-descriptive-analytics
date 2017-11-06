@@ -56,13 +56,23 @@ def buildValues(aggregation, cubeList, day):
 		if aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours':
 			mainDimData = ""
 		elif aggregation == 'weekly-usage' or aggregation == 'monthly-usage':
-			import random
-			random.seed()
+			"""import random
+			random.seed()"""
 			if(k['name'] == 'cod_passenger'):
 				mainDimData = k['values']
-				#Randomly generate ZIP codes
+				"""#Randomly generate ZIP codes
 				for i, v in enumerate(mainDimData):
-					mainDimData[i] = str(random.randint(0, 9999)*10).zfill(5) + "-" + str(random.randint(0, 99)*10).zfill(3)
+					mainDimData[i] = str(random.randint(0, 9999)*10).zfill(5) + "-" + str(random.randint(0, 99)*10).zfill(3)"""
+				#Convert timestamp to datatime string (when value is available)
+				for i, v in enumerate(mainDimData):
+					if mainDimData[i] != 0:
+						tmp = str(mainDimData[i])
+						if mainDimData[i] > 0:
+							mainDimData[i] = [datetime.datetime.fromtimestamp(int(tmp[:-1])).strftime("%d-%m-%y"),"F" if int(tmp[-1:]) == 1 else "M"]
+						else:
+							mainDimData[i] = [(datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=int(tmp[:-1]))).strftime("%d-%m-%y"),"F" if int(tmp[-1:]) == 1 else "M"]
+					else:		
+						mainDimData[i] = [numpy.nan, numpy.nan]
 		else:
 			if(k['name'] == 'cod_linha'):
 				mainDimData = k['values']
@@ -307,7 +317,14 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 	return outFile
 
 
-def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, processing, format, outputFolder):
+def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, processing, format, outputFolder, procType):
+
+	if procType == "busUsage":
+		measure = "passengers"
+	elif procType == "passengerUsage":
+		measure = "usage"
+	else:
+		raise RuntimeError("Type of processing not recognized")
 
 	#Initialize
 	sys.stdout = open(os.devnull, 'w')
@@ -315,31 +332,32 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 	sys.stdout = sys.__stdout__; 
 
 	#Get Historical cube PID from metadata
-	cube.Cube.search(container_filter='bigsea',metadata_key_filter='datacube_name',metadata_value_filter='historical',display=False)
+	cube.Cube.search(container_filter='bigsea',metadata_key_filter='datacube_name',metadata_value_filter='historical_'+measure,display=False)
 	data = json.loads(cube.Cube.client.last_response)
 	if not data['response'][0]['objcontent'][0]['rowvalues']:
 		exit("ERROR: Historical datacube not found")
 	else:
 		historicalCubePid = data['response'][0]['objcontent'][0]['rowvalues'][0][0]
 
+	historicalCube = cube.Cube(pid=historicalCubePid)
 	#Get Historical start/end date from metadata
-	cube.Cube.search(container_filter='bigsea',metadata_key_filter='start_date',display=False)
+
+	historicalCube.metadata(metadata_key='start_date',display=False)
 	data = json.loads(cube.Cube.client.last_response)
-	if not data['response'][0]['objcontent'][0]['rowvalues']:
+	if not data['response'][1]['objcontent'][0]['rowvalues']:
 		exit("ERROR: Historical datacube not found")
 	else:
-		startDate = data['response'][0]['objcontent'][0]['rowvalues'][0][2]
+		startDate = data['response'][1]['objcontent'][0]['rowvalues'][0][4]
 		startDate = datetime.datetime.strptime(startDate, "%Y-%m-%d")
 
-	cube.Cube.search(container_filter='bigsea',metadata_key_filter='end_date',display=False)
+	historicalCube.metadata(metadata_key='end_date',display=False)
 	data = json.loads(cube.Cube.client.last_response)
-	if not data['response'][0]['objcontent'][0]['rowvalues']:
+	if not data['response'][1]['objcontent'][0]['rowvalues']:
 		exit("ERROR: Historical datacube not found")
 	else:
-		endDate = data['response'][0]['objcontent'][0]['rowvalues'][0][2]
+		endDate = data['response'][1]['objcontent'][0]['rowvalues'][0][4]
 		endDate = datetime.datetime.strptime(endDate, "%Y-%m-%d")
 
-	historicalCube = cube.Cube(pid=historicalCubePid)
 	aggregatedCube = historicalCube.aggregate(group_size='all',operation='sum',ncores=singleNcores)
 
 	#Subset on weekdays (monday is 0)

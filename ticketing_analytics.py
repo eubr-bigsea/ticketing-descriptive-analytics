@@ -99,63 +99,63 @@ if __name__ == "__main__":
 	if procType == "passengerUsage":
 		if stats == "all" or stats == "weekly-usage":
 			print("Computing: passenger usage stats for each bus line and week in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-usage", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-usage", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "monthly-usage":
 			print("Computing: passenger usage stats for each bus line and month in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-usage", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-usage", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 	elif procType == "busUsage":
 		if stats == "all" or stats == "weekdaysets-peakhours":
 			print("Computing: number of passenger stats for each hour of group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-peakhours", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-peakhours", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdaysets-lines":
 			print("Computing: number of passenger stats for each bus line and group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-lines", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-lines", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-peakhours":
 			print("Computing: number of passenger stats for each hour of weekday")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-peakhours", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-peakhours", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-lines":
 			print("Computing: number of passenger stats for each bus line and weekday")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-lines", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-lines", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-hourly-lines", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-hourly-lines", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdaysets-hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour of group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-hourly-lines", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-hourly-lines", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "monthly-lines":
 			print("Computing: number of passenger stats for each bus line and month in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-lines", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-lines", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekly-lines":
 			print("Computing: number of passenger stats for each bus line and week in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-lines", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-lines", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "daily-lines":
 			print("Computing: number of passenger stats for each bus line and day in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "daily-lines", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "daily-lines", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "hourly-lines", format, outputFolder)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "hourly-lines", format, outputFolder, procType)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 	print("*************************************************\n")
