@@ -46,6 +46,7 @@ if __name__ == "__main__":
 	port=''
 	policyFile = ""
 	anonymizationBin = ""
+	benchmark = False
 
 	if dataDir == "$PWD":
 		inputFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "input_data")
@@ -65,9 +66,23 @@ if __name__ == "__main__":
 	#Run anonymization
 	print("*************************************************")
 
+	if benchmark == True:
+		import timeit
+		global_start_time = timeit.default_timer()
+
 	anonymFile = [0 for m in range(0,len(os.listdir(inputFolder)))]
 	for i, e in enumerate(sorted(os.listdir(inputFolder))):
+		if benchmark == True:
+			start_time = timeit.default_timer()
 		anonymFile[i] = privacy.anonymizeFile(anonymizationBin, e, inputFolder, tmpFolder, policyFile, mode)
+		if benchmark == True:
+			final_time = timeit.default_timer() - start_time
+			print("Time required on file: "+ str(final_time))
+
+	if benchmark == True:
+		anonymFile = compss_wait_on(anonymFile)
+		global_final_time = timeit.default_timer() - global_start_time
+		print("Required time: "+ str(global_final_time))
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 	print("*************************************************\n")
