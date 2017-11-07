@@ -6,6 +6,7 @@ import common_functions as common
 import privacy_functions as privacy
 import descriptive_stats as dstat
 import ticketing_etl as etl
+import ConfigParser
 
 if __name__ == "__main__":
 
@@ -36,26 +37,67 @@ if __name__ == "__main__":
 	dataDir = args.dir
 	mode = args.mode
 
-	#Define arguments
-	parallelNcores = 1
-	singleNcores = 1
-	multiProcesses = 1
-	user=''
-	password=''
-	hostname=''
-	port=''
-	policyFile = ""
-	anonymizationBin = ""
-	benchmark = False
-
 	if dataDir == "$PWD":
 		inputFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "input_data")
 		tmpFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp_data")
 		outputFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output_data")
+		configFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.ini")
 	else:
 		inputFolder = os.path.join(dataDir, "input_data")
 		tmpFolder = os.path.join(dataDir, "tmp_data")
 		outputFolder = os.path.join(dataDir, "output_data")
+		configFile = os.path.join(dataDir, "config.ini")
+
+	#Read config. arguments 
+	config = ConfigParser.ConfigParser()
+	config.read(configFile)
+
+
+	if config.has_option('main', 'parallelNcores'):
+		parallelNcores = config.get('main', 'parallelNcores')
+	else:
+		parallelNcores = 1
+	if config.has_option('main', 'singleNcores'):
+		singleNcores = config.get('main', 'singleNcores')
+	else:
+		singleNcores = 1
+	if config.has_option('main', 'multiProcesses'):
+		multiProcesses = config.get('main', 'multiProcesses')
+	else:
+		multiProcesses = 1
+	if config.has_option('main', 'benchmark'):
+		benchmark = config.get('main', 'benchmark')
+	else:
+		benchmark = False
+
+	if config.has_option('ophidia', 'user'):
+		user = config.get('ophidia', 'user')
+	else:
+		print("Username for Ophidia instance not specified in configuration file")
+		exit(1)
+	if config.has_option('ophidia', 'pass'):
+		password = config.get('ophidia', 'pass')
+	else:
+		print("Password for Ophidia instance not specified in configuration file")
+		exit(1)
+	if config.has_option('ophidia', 'host'):
+		hostname = config.get('ophidia', 'host')
+	else:
+		print("Hostname of Ophidia instance not specified in configuration file")
+		exit(1)
+	if config.has_option('ophidia', 'port'):
+		port = config.get('ophidia', 'port')
+	else:
+		port = '11732'
+
+	if config.has_option('privacy', 'policyFile'):
+		policyFile = config.get('privacy', 'policyFile')
+	else:
+		policyFile = "cards.json"
+	if config.has_option('privacy', 'anonymizationBin'):
+		anonymizationBin = config.get('privacy', 'anonymizationBin')
+	else:
+		anonymizationBin = "anonymization.jar"
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 
