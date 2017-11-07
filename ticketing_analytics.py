@@ -16,13 +16,13 @@ if __name__ == "__main__":
 	parserA = subparsers.add_parser('bus-usage',description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
 	parserA.add_argument('-s','--stats', default="all", help='Type of stats available', choices=["all", "weekdaysets-peakhours", "weekdaysets-lines", "weekdays-peakhours", "weekdays-lines", "weekdays-hourly-lines", "weekdaysets-hourly-lines", "monthly-lines", "weekly-lines", "daily-lines", "hourly-lines"])
 	parserA.add_argument('-f','--format', default="csv", help='Type of output format', choices=['json','csv'])
-	parserA.add_argument('-d','--dir', default="$PWD", help='Base path of input_data, tmp_data and output_data')
+	parserA.add_argument('-c','--conf', default="config.ini", help='Path to config file')
 	parserA.add_argument('-m','--mode', default="compss", help='Processing mode', choices=['compss','sequential'])
 
 	parserB = subparsers.add_parser('passenger-usage', description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
 	parserB.add_argument('-s','--stats', default="all", help='Type of stats available', choices=["all", "monthly-usage", "weekly-usage"])
 	parserB.add_argument('-f','--format', default="csv", help='Type of output format', choices=['json','csv'])
-	parserB.add_argument('-d','--dir', default="$PWD", help='Base path of input_data, tmp_data and output_data')
+	parserB.add_argument('-c','--conf', default="config.ini", help='Path to config file')
 	parserB.add_argument('-m','--mode', default="compss", help='Processing mode', choices=['compss','sequential'])
 
 	args = parser.parse_args()
@@ -34,24 +34,17 @@ if __name__ == "__main__":
 
 	stats = args.stats
 	format = args.format
-	dataDir = args.dir
+	confFile = args.conf
 	mode = args.mode
 
-	if dataDir == "$PWD":
-		inputFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "input_data")
-		tmpFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp_data")
-		outputFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output_data")
+	if confFile == "config.ini":
 		configFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.ini")
 	else:
-		inputFolder = os.path.join(dataDir, "input_data")
-		tmpFolder = os.path.join(dataDir, "tmp_data")
-		outputFolder = os.path.join(dataDir, "output_data")
-		configFile = os.path.join(dataDir, "config.ini")
+		configFile = confFile
 
 	#Read config. arguments 
 	config = ConfigParser.ConfigParser()
 	config.read(configFile)
-
 
 	if config.has_option('main', 'parallelNcores'):
 		parallelNcores = config.get('main', 'parallelNcores')
@@ -90,14 +83,40 @@ if __name__ == "__main__":
 	else:
 		port = '11732'
 
-	if config.has_option('privacy', 'policyFile'):
-		policyFile = config.get('privacy', 'policyFile')
+	if config.has_option('privacy', 'policyFile1'):
+		policyFile1 = config.get('privacy', 'policyFile1')
 	else:
-		policyFile = "cards.json"
-	if config.has_option('privacy', 'anonymizationBin'):
-		anonymizationBin = config.get('privacy', 'anonymizationBin')
+		print("Policy file for Anonymization1 not specified in configuration file")
+		exit(1)
+	if config.has_option('privacy', 'anonymization1'):
+		anonymizationBin1 = config.get('privacy', 'anonymization1')
 	else:
-		anonymizationBin = "anonymization.jar"
+		print("Anonymization1 executable not specified in configuration file")
+		exit(1)
+	if config.has_option('privacy', 'policyFile3'):
+		policyFile3 = config.get('privacy', 'policyFile3')
+	else:
+		print("Policy file for Anonymization3 not specified in configuration file")
+		exit(1)
+	if config.has_option('privacy', 'anonymization3'):
+		anonymizationBin3 = config.get('privacy', 'anonymization3')
+	else:
+		print("Anonymization3 executable not specified in configuration file")
+		exit(1)
+
+	if config.has_option('data', 'inputFolder'):
+		inputFolder = config.get('data', 'inputFolder')
+	else:
+		inputFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "input_data")
+	if config.has_option('data', 'inputFolder'):
+		tmpFolder = config.get('data', 'tmpFolder')
+	else:
+		tmpFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp_data")
+	if config.has_option('data', 'inputFolder'):
+		outputFolder = config.get('data', 'outputFolder')
+	else:
+		outputFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output_data")
+
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -116,7 +135,7 @@ if __name__ == "__main__":
 	for i, e in enumerate(sorted(os.listdir(inputFolder))):
 		if benchmark == True:
 			start_time = timeit.default_timer()
-		anonymFile[i] = privacy.anonymizeFile(anonymizationBin, e, inputFolder, tmpFolder, policyFile, mode)
+		anonymFile[i] = privacy.anonymizeFile(anonymizationBin1, e, inputFolder, tmpFolder, policyFile1, mode)
 		if benchmark == True:
 			final_time = timeit.default_timer() - start_time
 			print("Time required on file: "+ str(final_time))
