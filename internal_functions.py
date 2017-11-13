@@ -9,7 +9,7 @@ def internalAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, p
 	if os.path.isfile(inputFile):
 		inFilename, inFileExt = os.path.splitext(inputFile)
 		if inFileExt == '.txt':
-			print("Anonymizing file: \"" + inputName + "\"")
+			print("Anonymizing file (Phase 1): \"" + inputName + "\"")
 			newFile = common.jsonLine2json(inputFile)
 
 			try:

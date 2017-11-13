@@ -16,13 +16,13 @@ if __name__ == "__main__":
 	parserA = subparsers.add_parser('bus-usage',description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
 	parserA.add_argument('-s','--stats', default="all", help='Type of stats available', choices=["all", "weekdaysets-peakhours", "weekdaysets-lines", "weekdays-peakhours", "weekdays-lines", "weekdays-hourly-lines", "weekdaysets-hourly-lines", "monthly-lines", "weekly-lines", "daily-lines", "hourly-lines"])
 	parserA.add_argument('-f','--format', default="csv", help='Type of output format', choices=['json','csv'])
-	parserA.add_argument('-c','--conf', default="config.ini", help='Path to config file')
+	parserA.add_argument('-c','--conf', default="config.ini", help='Absolute path to config file')
 	parserA.add_argument('-m','--mode', default="compss", help='Processing mode', choices=['compss','sequential'])
 
 	parserB = subparsers.add_parser('passenger-usage', description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
 	parserB.add_argument('-s','--stats', default="all", help='Type of stats available', choices=["all", "monthly-usage", "weekly-usage"])
 	parserB.add_argument('-f','--format', default="csv", help='Type of output format', choices=['json','csv'])
-	parserB.add_argument('-c','--conf', default="config.ini", help='Path to config file')
+	parserB.add_argument('-c','--conf', default="config.ini", help='Absolute path to config file')
 	parserB.add_argument('-m','--mode', default="compss", help='Processing mode', choices=['compss','sequential'])
 
 	args = parser.parse_args()
@@ -135,7 +135,7 @@ if __name__ == "__main__":
 	for i, e in enumerate(sorted(os.listdir(inputFolder))):
 		if benchmark == True:
 			start_time = timeit.default_timer()
-		anonymFile[i] = privacy.anonymizeFile(anonymizationBin1, e, inputFolder, tmpFolder, policyFile1, mode)
+		anonymFile[i] = privacy.anonymize1File(anonymizationBin1, e, inputFolder, tmpFolder, policyFile1, mode)
 		if benchmark == True:
 			final_time = timeit.default_timer() - start_time
 			print("Time required on file: "+ str(final_time))
@@ -177,12 +177,18 @@ if __name__ == "__main__":
 	if procType == "passengerUsage":
 		if stats == "all" or stats == "weekly-usage":
 			print("Computing: passenger usage stats for each bus line and week in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-usage", format, outputFolder, procType, mode)
+			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-usage", format, outputFolder, procType, mode)
+			print time.strftime('%Y-%m-%d %H:%M:%S')
+
+			anonymFile = privacy.anonymize3File(anonymizationBin3, outFile, outputFolder, outputFolder, policyFile3, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "monthly-usage":
 			print("Computing: passenger usage stats for each bus line and month in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-usage", format, outputFolder, procType, mode)
+			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-usage", format, outputFolder, procType, mode)
+			print time.strftime('%Y-%m-%d %H:%M:%S')
+
+			anonymFile = privacy.anonymize3File(anonymizationBin3, outFile, outputFolder, outputFolder, policyFile3, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 	elif procType == "busUsage":
