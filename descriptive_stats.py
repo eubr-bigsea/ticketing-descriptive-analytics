@@ -192,6 +192,7 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 		weekDays = ["Saturday/Sunday","Monday/Friday","Tuesday/Wednesday/Thursday"]
 		weekDaysId = [[6,7],[1,5],[2,3,4]]
 
+	cubeList = [[0 for m in METRICS_BUS] for k in weekDays]
 	for idx, day in enumerate(weekDays):
 		#Build filter set 
 		filter_list = ""
@@ -209,18 +210,19 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 		#Extract relevant days
 		subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
 
-		cubeList = [0 for m in METRICS_BUS]
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
-		if mode == "compss":
-			from pycompss.api.api import compss_wait_on
-			cubeList = compss_wait_on(cubeList)
+			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
 
+	if mode == "compss":
+		from pycompss.api.api import compss_wait_on
+		cubeList = compss_wait_on(cubeList)
+
+	for idx, day in enumerate(weekDays):
 		#Get dimension and measure values
 		codLinhaData = None
 		dateData = None
 		passengerData = []
-		codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList, day)
+		codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList[idx], day)
 
 		#Build json file and array for plot
 		if format == 'json':
@@ -242,6 +244,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 	#Aggregate at day level once
 	reducedCube = startCube.reduce2(dim='time',concept_level='d',operation='sum',ncores=parallelNcores)
 
+	cubeList = [[0 for m in METRICS_BUS] for k in weekDays]
 	for idx, day in enumerate(weekDays):
 		#Build filter set 
 		filter_list = ""
@@ -259,18 +262,19 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 		#Extract relevant days
 		subsettedCube = reducedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
 
-		cubeList = [0 for m in METRICS_BUS]
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = totalAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
-		if mode == "compss":
-			from pycompss.api.api import compss_wait_on
-			cubeList = compss_wait_on(cubeList)
+			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
 
+	if mode == "compss":
+		from pycompss.api.api import compss_wait_on
+		cubeList = compss_wait_on(cubeList)
+
+	for idx, day in enumerate(weekDays):
 		#Get dimension and measure values
 		codLinhaData = None
 		dateData = None
 		passengerData = []
-		codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList, day)
+		codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList[idx], day)
 
 		#Build json file and array for plot
 		if format == 'json':
@@ -293,9 +297,10 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 	mergedCube = startCube.merge(nmerge=0,ncores=1)
 	aggregatedCube = mergedCube.aggregate(group_size='all',operation='sum',ncores=1)
 
+	cubeList = [[0 for m in METRICS_BUS] for k in weekDays]
 	for idx, day in enumerate(weekDays):
-		#Build filter set 
 		filter_list = ""
+		#Build filter set 
 		if aggregation == 'weekdays-peakhours': 
 			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
 		else:
@@ -310,18 +315,20 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 		#Extract relevant days
 		subsettedCube = aggregatedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
 
-		cubeList = [0 for m in METRICS_BUS]
+		#cubeList = [0 for m in METRICS_BUS]
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
-		if mode == "compss":
-			from pycompss.api.api import compss_wait_on
-			cubeList = compss_wait_on(cubeList)
+			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
 
+	if mode == "compss":
+		from pycompss.api.api import compss_wait_on
+		cubeList = compss_wait_on(cubeList)
+
+	for idx, day in enumerate(weekDays):
 		#Get dimension and measure values
 		codLinhaData = None
 		dateData = None
 		passengerData = []
-		codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList, day)
+		codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList[idx], day)
 
 		#Build json file and array for plot
 		if format == 'json':
