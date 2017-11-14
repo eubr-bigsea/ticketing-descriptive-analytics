@@ -101,7 +101,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType):
 		#Create NetCDF file
 		start_time = datetime.datetime.strptime(datetime.datetime.utcfromtimestamp(time_val[0]).strftime('%Y-%m-%d %H:%M:%S'), "%Y-%m-%d %H:%M:%S")
 		times = [start_time + datetime.timedelta(hours=0.5) + n *datetime.timedelta(hours=1) for n in range(time_len)]
-		outputFile = os.path.join(outputFolder, "traffic_" + str(datetime.date.today()) + ".nc")
+		outputFile = os.path.join(outputFolder, "traffic_" + str(time.time()) + ".nc")
 		common.createNetCDFFileBusUsage(outputFile, x, y, times, measure)
 
 	elif procType == "passengerUsage":
@@ -165,7 +165,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType):
 		#Create NetCDF file
 		start_time = datetime.datetime.strptime(datetime.datetime.utcfromtimestamp(time_val[0]).strftime('%Y-%m-%d %H:%M:%S'), "%Y-%m-%d %H:%M:%S")
 		times = [start_time + datetime.timedelta(days=0.5) + n *datetime.timedelta(days=1) for n in range(time_len)]
-		outputFile = os.path.join(outputFolder, "traffic_" + str(datetime.date.today()) + ".nc")
+		outputFile = os.path.join(outputFolder, "traffic_" + str(time.time()) + ".nc")
 
 		common.createNetCDFFilePassengerUsage(outputFile, x, y, times, measure)
 	else:
@@ -173,7 +173,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType):
 
 	return times, outputFile
 
-def loadOphidia(inputFile, times, singleNcores, user, password, hostname, port, procType):
+def loadOphidia(fileURL, times, singleNcores, user, password, hostname, port, procType):
 
 	if procType == "busUsage":
 		measure = "passengers"
@@ -187,6 +187,9 @@ def loadOphidia(inputFile, times, singleNcores, user, password, hostname, port, 
 	sys.stdout = open(os.devnull, 'w')
 
 	cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
+	cube.Cube.script(script='bigsea_retrieve',args=fileURL+'|token',display=False)
+	data = json.loads(cube.Cube.client.last_response)
+	inputFile = data['response'][0]['objcontent'][0]["message"].splitlines()[0]
 
 	try:
 		cube.Cube.createcontainer(container='bigsea',dim='cod_passenger|cod_linha|cod_veiculo|time',dim_type='long|long|long|double',hierarchy='oph_base|oph_base|oph_base|oph_time',display=False,base_time='2015-01-01 00:00:00',calendar='gregorian',units='h')

@@ -7,6 +7,7 @@ import privacy_functions as privacy
 import descriptive_stats as dstat
 import ticketing_etl as etl
 import ConfigParser
+import tarfile
 
 if __name__ == "__main__":
 
@@ -116,7 +117,11 @@ if __name__ == "__main__":
 		outputFolder = config.get('data', 'outputFolder')
 	else:
 		outputFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output_data")
-
+	if config.has_option('data', 'webURL'):
+		pmesUrl = config.get('data', 'webURL')
+	else:
+		print("URL of web server for data transfer is not defined")
+		exit(1)
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -160,10 +165,22 @@ if __name__ == "__main__":
 	times , outFile = etl.transformToNetCDF(data, tmpFolder, multiProcesses, procType)
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
+
+	#Move file to Ophidia instance
+	print("Moving file from COMPSs to Ophidia")
+	outName = outFile.rsplit("/", 1)[1]
+	with tarfile.open(outFile + ".tar.gz", "w:gz") as tar:
+		tar.add(outFile,recursive=False,arcname=outName)
+		tar.close()
+
+	#Build url
+	url = pmesUrl + "/" + outName + ".tar.gz"
+
+	print time.strftime('%Y-%m-%d %H:%M:%S')
 	print("Running step 3 -> Loading")
 
 	#Import into Ophidia
-	etl.loadOphidia(outFile, times, singleNcores, user, password, hostname, port, procType)	
+	etl.loadOphidia(url, times, singleNcores, user, password, hostname, port, procType)
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 	print("End of ETL process")
