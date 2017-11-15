@@ -12,6 +12,7 @@ import tarfile
 if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
+	parser.add_argument('-d','--distribution', default="distributed", help='If the components are distributed or not', choices=['distributed','local'])
 	subparsers = parser.add_subparsers(dest="type", help='Type of index to evaluate')
 
 	parserA = subparsers.add_parser('bus-usage',description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
@@ -37,6 +38,7 @@ if __name__ == "__main__":
 	format = args.format
 	confFile = args.conf
 	mode = args.mode
+	distribution = args.distribution
 
 	if confFile == "config.ini":
 		configFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.ini")
@@ -118,7 +120,7 @@ if __name__ == "__main__":
 	else:
 		outputFolder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output_data")
 	if config.has_option('data', 'webURL'):
-		pmesUrl = config.get('data', 'webURL')
+		webServerUrl = config.get('data', 'webURL')
 	else:
 		print("URL of web server for data transfer is not defined")
 		exit(1)
@@ -166,21 +168,25 @@ if __name__ == "__main__":
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 
-	#Move file to Ophidia instance
-	print("Moving file from COMPSs to Ophidia")
-	outName = outFile.rsplit("/", 1)[1]
-	with tarfile.open(outFile + ".tar.gz", "w:gz") as tar:
-		tar.add(outFile,recursive=False,arcname=outName)
-		tar.close()
+	outFileRef = ""
+	if distribution in "distributed":
+		#Move file to Ophidia instance
+		print("Moving file from COMPSs to Ophidia")
+		outName = outFile.rsplit("/", 1)[1]
+		with tarfile.open(outFile + ".tar.gz", "w:gz") as tar:
+			tar.add(outFile,recursive=False,arcname=outName)
+			tar.close()
 
-	#Build url
-	url = pmesUrl + "/" + outName + ".tar.gz"
+		#Build Web Server url
+		outFileRef = webServerUrl + "/" + outName + ".tar.gz"
+	else:
+		outFileRef = outFile
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 	print("Running step 3 -> Loading")
 
 	#Import into Ophidia
-	etl.loadOphidia(url, times, singleNcores, user, password, hostname, port, procType)
+	etl.loadOphidia(outFileRef, times, singleNcores, user, password, hostname, port, procType, distribution)	
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 	print("End of ETL process")

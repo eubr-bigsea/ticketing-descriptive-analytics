@@ -173,7 +173,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType):
 
 	return times, outputFile
 
-def loadOphidia(fileURL, times, singleNcores, user, password, hostname, port, procType):
+def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, procType, distribution):
 
 	if procType == "busUsage":
 		measure = "passengers"
@@ -187,9 +187,12 @@ def loadOphidia(fileURL, times, singleNcores, user, password, hostname, port, pr
 	sys.stdout = open(os.devnull, 'w')
 
 	cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
-	cube.Cube.script(script='bigsea_retrieve',args=fileURL+'|token',display=False)
-	data = json.loads(cube.Cube.client.last_response)
-	inputFile = data['response'][0]['objcontent'][0]["message"].splitlines()[0]
+	if distribution in "distributed":
+		cube.Cube.script(script='bigsea_retrieve',args=fileRef+'|token',display=False)
+		data = json.loads(cube.Cube.client.last_response)
+		inputFile = data['response'][0]['objcontent'][0]["message"].splitlines()[0]
+	else:
+		inputFile = fileRef
 
 	try:
 		cube.Cube.createcontainer(container='bigsea',dim='cod_passenger|cod_linha|cod_veiculo|time',dim_type='long|long|long|double',hierarchy='oph_base|oph_base|oph_base|oph_time',display=False,base_time='2015-01-01 00:00:00',calendar='gregorian',units='h')
