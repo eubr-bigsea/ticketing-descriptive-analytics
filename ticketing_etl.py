@@ -186,13 +186,21 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 
 	sys.stdout = open(os.devnull, 'w')
 
-	cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
+	if user is "__TOKEN__":
+		cube.Cube.setclient(token=password, server=hostname, port=port)
+	else:
+		cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
+
 	if distribution in "distributed":
 		cube.Cube.script(script='bigsea_retrieve',args=fileRef+'|token',display=False)
 		data = json.loads(cube.Cube.client.last_response)
 		inputFile = data['response'][0]['objcontent'][0]["message"].splitlines()[0]
 	else:
 		inputFile = fileRef
+
+	#Check instance base_src_path
+	if cube.Cube.client.base_src_path != "/" and inputFile.startswith(cube.Cube.client.base_src_path):
+		inputFile = inputFile[len(cube.Cube.client.base_src_path):]
 
 	try:
 		cube.Cube.createcontainer(container='bigsea',dim='cod_passenger|cod_linha|cod_veiculo|time',dim_type='long|long|long|double',hierarchy='oph_base|oph_base|oph_base|oph_time',display=False,base_time='2015-01-01 00:00:00',calendar='gregorian',units='h')

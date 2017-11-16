@@ -350,7 +350,10 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 
 	#Initialize
 	sys.stdout = open(os.devnull, 'w')
-	cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
+	if user is "__TOKEN__":
+		cube.Cube.setclient(token=password, server=hostname, port=port)
+	else:
+		cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
 	sys.stdout = sys.__stdout__; 
 
 	#Get Historical cube PID from metadata

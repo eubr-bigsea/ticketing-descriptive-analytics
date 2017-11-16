@@ -12,20 +12,21 @@ import tarfile
 if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
+	parser.add_argument('-u','--username', help='Username')
+	parser.add_argument('-p','--password', help='Password of user')
+	parser.add_argument('-t','--token', help='Access token')
+	parser.add_argument('-f','--format', default="csv", help='Type of output format', choices=['json','csv'])
+	parser.add_argument('-c','--conf', default="config.ini", help='Absolute path to config file')
+	parser.add_argument('-m','--mode', default="compss", help='Processing mode', choices=['compss','sequential'])
 	parser.add_argument('-d','--distribution', default="distributed", help='If the components are distributed or not', choices=['distributed','local'])
+
 	subparsers = parser.add_subparsers(dest="type", help='Type of index to evaluate')
 
 	parserA = subparsers.add_parser('bus-usage',description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
 	parserA.add_argument('-s','--stats', default="all", help='Type of stats available', choices=["all", "weekdaysets-peakhours", "weekdaysets-lines", "weekdays-peakhours", "weekdays-lines", "weekdays-hourly-lines", "weekdaysets-hourly-lines", "monthly-lines", "weekly-lines", "daily-lines", "hourly-lines"])
-	parserA.add_argument('-f','--format', default="csv", help='Type of output format', choices=['json','csv'])
-	parserA.add_argument('-c','--conf', default="config.ini", help='Absolute path to config file')
-	parserA.add_argument('-m','--mode', default="compss", help='Processing mode', choices=['compss','sequential'])
 
 	parserB = subparsers.add_parser('passenger-usage', description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
 	parserB.add_argument('-s','--stats', default="all", help='Type of stats available', choices=["all", "monthly-usage", "weekly-usage"])
-	parserB.add_argument('-f','--format', default="csv", help='Type of output format', choices=['json','csv'])
-	parserB.add_argument('-c','--conf', default="config.ini", help='Absolute path to config file')
-	parserB.add_argument('-m','--mode', default="compss", help='Processing mode', choices=['compss','sequential'])
 
 	args = parser.parse_args()
 
@@ -39,6 +40,18 @@ if __name__ == "__main__":
 	confFile = args.conf
 	mode = args.mode
 	distribution = args.distribution
+
+	user = args.username
+	password = args.password
+	token = args.token
+
+	if token is None and (user is None or password is None):
+		print("Credentials (user-password or token) for Ophidia instance are not specified")
+		exit(1)
+
+	if token is not None:
+		user = "__TOKEN__"
+		password = token
 
 	if confFile == "config.ini":
 		configFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.ini")
@@ -66,16 +79,6 @@ if __name__ == "__main__":
 	else:
 		benchmark = False
 
-	if config.has_option('ophidia', 'user'):
-		user = config.get('ophidia', 'user')
-	else:
-		print("Username for Ophidia instance not specified in configuration file")
-		exit(1)
-	if config.has_option('ophidia', 'pass'):
-		password = config.get('ophidia', 'pass')
-	else:
-		print("Password for Ophidia instance not specified in configuration file")
-		exit(1)
 	if config.has_option('ophidia', 'host'):
 		hostname = config.get('ophidia', 'host')
 	else:
