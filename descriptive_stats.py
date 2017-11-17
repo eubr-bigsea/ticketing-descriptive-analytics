@@ -263,7 +263,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 		subsettedCube = reducedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
 
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
+			cubeList[idx][i] = totalAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on

@@ -53,7 +53,7 @@ def extractFromFile(inputFolder, inputName, mode):
 		from internal_functions import internalExtractFromFile
 		return internalExtractFromFile(inputFolder, inputName)
 
-def transformToNetCDF(data, outputFolder, multiProcesses, procType):
+def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 
 	if procType == "busUsage":
 		time_period = 3600
@@ -86,12 +86,21 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType):
 
 		measure = numpy.full([len(x),len(y),time_len],numpy.nan, dtype=numpy.float32)
 
-		#Aggregate times
-		#pool = multiprocessing.Pool(processes=multiProcesses)
-		#results = pool.map(common.aggregateData, [(ar, time_val) for idx, ar in enumerate(sub_times)])
-		results = []
-		for idx, ar in enumerate(sub_times):
-			results.append(common.aggregateData((ar, time_val)))
+		sub_times_i = numpy.array_split(sub_times, int(multiProcesses))
+		results = [0 for i in range(0, int(multiProcesses))]
+		for i in range(0, int(multiProcesses)):
+			if mode == 'compss':
+				from compss_functions import compssTransform
+				results[i] = compssTransform(sub_times_i[i], time_val)
+			else:
+				from compss_functions import internalTransform
+				results[i] = internalTransform(sub_times_i[i], time_val)
+
+		if mode == 'compss':
+			from pycompss.api.api import compss_wait_on
+			results = compss_wait_on(results)
+
+		results = [r for res in results for r in res]
 
 		for idx, ar in enumerate(sub_times):
 			x_index = (numpy.where(x==sub_x[idx])[0])
@@ -137,12 +146,21 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType):
 
 		measure = numpy.full([len(x),len(y),time_len],numpy.nan, dtype=numpy.float32)
 
-		#Aggregate times
-		#pool = multiprocessing.Pool(processes=multiProcesses)
-		#results = pool.map(common.aggregateData, [(ar, time_val) for idx, ar in enumerate(sub_times)])
-		results = []
-		for idx, ar in enumerate(sub_times):
-			results.append(common.aggregateData((ar, time_val)))
+		sub_times_i = numpy.array_split(sub_times, int(multiProcesses))
+		results = [0 for i in range(0, int(multiProcesses))]
+		for i in range(0, int(multiProcesses)):
+			if mode == 'compss':
+				from compss_functions import compssTransform
+				results[i] = compssTransform(sub_times_i[i], time_val)
+			else:
+				from compss_functions import internalTransform
+				results[i] = internalTransform(sub_times_i[i], time_val)
+
+		if mode == 'compss':
+			from pycompss.api.api import compss_wait_on
+			results = compss_wait_on(results)
+
+		results = [r for res in results for r in res]
 
 		for idx, ar in enumerate(sub_times):
 			x_index = (numpy.where(x==sub_x[idx])[0])

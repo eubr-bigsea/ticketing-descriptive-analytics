@@ -164,7 +164,7 @@ if __name__ == "__main__":
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 	print("Running step 2 -> Transformation")
 
-	times , outFile = etl.transformToNetCDF(data, tmpFolder, multiProcesses, procType)
+	times , outFile = etl.transformToNetCDF(data, tmpFolder, multiProcesses, procType, mode)
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 

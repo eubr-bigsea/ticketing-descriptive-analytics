@@ -56,9 +56,17 @@ def internalExtractFromFile(inputFolder, inputName):
 			#Convert from json to Pandas dataframe
 			newData = pandas.read_json(json_text, lines=False)
 
+			os.remove(inputFile)
 			return newData
 
 	return None
+
+def internalTransform(sub_times, time_val):
+	results = []
+	for idx, ar in enumerate(sub_times):
+		results.append(common.aggregateData((ar, time_val)))
+
+	return results
 
 
 #Functions for Ophidia aggregations
