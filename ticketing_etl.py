@@ -1,4 +1,4 @@
-import os, json, pandas, numpy, calendar, datetime, time
+import os, json, pandas, numpy, calendar, datetime, time, math
 import multiprocessing
 
 import sys
@@ -68,12 +68,72 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		t = pandas.to_datetime(t, format='%d/%m/%y %H:%M:%S,%f')
 
 		#Split time array based on external dimensions
-		sub_times = numpy.split(t, numpy.where(diff)[0]+1)
-		sub_x = [numpy.unique(sx) for sx in numpy.split(x, numpy.where(diff)[0]+1)]
-		sub_y = [numpy.unique(sy) for sy in numpy.split(y, numpy.where(diff)[0]+1)]
+		records_split = numpy.where(diff)[0]+1
+		sub_times = numpy.split(t, records_split)
+		#Add index for first element
+		records_split = numpy.insert(records_split,0,0)
+		sub_x = numpy.take(x, records_split)
+		sub_y = numpy.take(y, records_split)
 
 		x = numpy.unique(x)
 		y = numpy.unique(y)
+
+		#Define partitions for concurrent execution
+		if int(multiProcesses) > 1:
+			#Compute exact number or records per task
+			minNum = math.floor(len(t) / float(multiProcesses))
+			remainder = len(t) % minNum
+			record_task = []
+			for i in range(0,int(multiProcesses)):
+				if remainder > 0:
+					record_task.append(minNum +1)
+					remainder = remainder - 1
+				else:
+					record_task.append(minNum)
+
+			#Compute number of matrix rows per task
+			row_task = []
+			count = 0
+			for i in diff_x:
+				count = count + 1
+				if i == True:
+					row_task.append(count)
+					count = 0
+			#Append last
+			count = count + 1
+			row_task.append(count)
+		
+			#Compute number of sub_times per task based on row
+			partitions = []
+			count = 0
+			for i in range(0,int(multiProcesses)):
+				while row_task:
+					count = count + row_task.pop(0)
+					if count >= record_task[i] or not row_task:
+						partitions.append(count)
+						count = 0
+						break
+
+			#Split arrays
+			count = 0
+			current = 0
+			splits = []
+			for p in partitions:
+				for i in range(current,len(sub_times)):
+					count = count + len(sub_times[i])
+					current = current + 1 
+					if count == p or not sub_times:
+						splits.append(current)
+						count = 0
+						break
+
+			sub_times = numpy.array_split(sub_times, splits)
+			sub_x = numpy.array_split(sub_x, splits)
+			sub_y = numpy.array_split(sub_y, splits)
+		else:
+			sub_times = [sub_times]
+			sub_x = [sub_x]
+			sub_y = [sub_y]
 
 		#Define time dimension (aggregate on time period)
 		start_date = min(t)
@@ -84,34 +144,31 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		#Time val contains also 24 steps for final day
 		time_val = [start_time + i*time_period for i in range(0,time_len+1)]
 
-		measure = numpy.full([len(x),len(y),time_len],numpy.nan, dtype=numpy.float32)
-
-		sub_times_i = numpy.array_split(sub_times, int(multiProcesses))
 		results = [0 for i in range(0, int(multiProcesses))]
 		for i in range(0, int(multiProcesses)):
 			if mode == 'compss':
 				from compss_functions import compssTransform
-				results[i] = compssTransform(sub_times_i[i], time_val)
+				results[i] = compssTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
 			else:
-				from compss_functions import internalTransform
-				results[i] = internalTransform(sub_times_i[i], time_val)
+				from internal_functions import internalTransform
+				results[i] = internalTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
 
 		if mode == 'compss':
 			from pycompss.api.api import compss_wait_on
 			results = compss_wait_on(results)
 
-		results = [r for res in results for r in res]
-
-		for idx, ar in enumerate(sub_times):
-			x_index = (numpy.where(x==sub_x[idx])[0])
-			y_index = (numpy.where(y==sub_y[idx])[0])
-			measure[x_index, y_index, :] = results[idx]
+		resultList = []
+		for r in results:
+			resultList.append(r)
+			
+		measure = numpy.concatenate(resultList, axis=0)
 
 		#Create NetCDF file
 		start_time = datetime.datetime.strptime(datetime.datetime.utcfromtimestamp(time_val[0]).strftime('%Y-%m-%d %H:%M:%S'), "%Y-%m-%d %H:%M:%S")
 		times = [start_time + datetime.timedelta(hours=0.5) + n *datetime.timedelta(hours=1) for n in range(time_len)]
 		outputFile = os.path.join(outputFolder, "traffic_" + str(time.time()) + ".nc")
 		common.createNetCDFFileBusUsage(outputFile, x, y, times, measure)
+
 
 	elif procType == "passengerUsage":
 		time_period = 86400
@@ -128,12 +185,72 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		t = pandas.to_datetime(t, format='%d/%m/%y %H:%M:%S,%f')
 
 		#Split time array based on external dimensions
-		sub_times = numpy.split(t, numpy.where(diff)[0]+1)
-		sub_x = [numpy.unique(sx) for sx in numpy.split(x, numpy.where(diff)[0]+1)]
-		sub_y = [numpy.unique(sy) for sy in numpy.split(y, numpy.where(diff)[0]+1)]
+		records_split = numpy.where(diff)[0]+1
+		sub_times = numpy.split(t, records_split)
+		#Add index for first element
+		records_split = numpy.insert(records_split,0,0)
+		sub_x = numpy.take(x, records_split)
+		sub_y = numpy.take(y, records_split)
 
 		x = numpy.unique(x)
 		y = numpy.unique(y)
+
+		#Define partitions for concurrent execution
+		if int(multiProcesses) > 1:
+			#Compute exact number or records per task
+			minNum = math.floor(len(t) / float(multiProcesses))
+			remainder = len(t) % minNum
+			record_task = []
+			for i in range(0,int(multiProcesses)):
+				if remainder > 0:
+					record_task.append(minNum +1)
+					remainder = remainder - 1
+				else:
+					record_task.append(minNum)
+
+			#Compute number of matrix rows per task
+			row_task = []
+			count = 0
+			for i in diff_x:
+				count = count + 1
+				if i == True:
+					row_task.append(count)
+					count = 0
+			#Append last
+			count = count + 1
+			row_task.append(count)
+		
+			#Compute number of sub_times per task based on row
+			partitions = []
+			count = 0
+			for i in range(0,int(multiProcesses)):
+				while row_task:
+					count = count + row_task.pop(0)
+					if count >= record_task[i] or not row_task:
+						partitions.append(count)
+						count = 0
+						break
+
+			#Split arrays
+			count = 0
+			current = 0
+			splits = []
+			for p in partitions:
+				for i in range(current,len(sub_times)):
+					count = count + len(sub_times[i])
+					current = current + 1 
+					if count == p or not sub_times:
+						splits.append(current)
+						count = 0
+						break
+
+			sub_times = numpy.array_split(sub_times, splits)
+			sub_x = numpy.array_split(sub_x, splits)
+			sub_y = numpy.array_split(sub_y, splits)
+		else:
+			sub_times = [sub_times]
+			sub_x = [sub_x]
+			sub_y = [sub_y]
 
 		#Define time dimension (aggregate on time period)
 		start_date = min(t)
@@ -144,35 +261,34 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		#Time val contains also 24 steps for final day
 		time_val = [start_time + i*time_period for i in range(0,time_len+1)]
 
-		measure = numpy.full([len(x),len(y),time_len],numpy.nan, dtype=numpy.float32)
-
-		sub_times_i = numpy.array_split(sub_times, int(multiProcesses))
 		results = [0 for i in range(0, int(multiProcesses))]
 		for i in range(0, int(multiProcesses)):
 			if mode == 'compss':
 				from compss_functions import compssTransform
-				results[i] = compssTransform(sub_times_i[i], time_val)
+				results[i] = compssTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
 			else:
-				from compss_functions import internalTransform
-				results[i] = internalTransform(sub_times_i[i], time_val)
+				from internal_functions import internalTransform
+				results[i] = internalTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
 
 		if mode == 'compss':
 			from pycompss.api.api import compss_wait_on
 			results = compss_wait_on(results)
 
-		results = [r for res in results for r in res]
-
-		for idx, ar in enumerate(sub_times):
-			x_index = (numpy.where(x==sub_x[idx])[0])
-			y_index = (numpy.where(y==sub_y[idx])[0])
-			measure[x_index, y_index, :] = results[idx]
+		resultList = []
+		for r in results:
+			resultList.append(r)
+			
+		measure = numpy.concatenate(resultList, axis=0)
 
 		#Match extra attributes with unique users
 		#x = [p for p,v in enumerate(x)]
 		w = pandas.to_datetime(w, format='%d/%m/%y', errors='coerce')
 		w = [k if k < numpy.datetime64('2018-01-01') else k.replace(year=k.year-100) for k in w]
-		sub_w = [sw[0] for sw in numpy.split(w, numpy.where(diff_x)[0]+1)]
-		sub_z = [sz[0] for sz in numpy.split(z, numpy.where(diff_x)[0]+1)]
+		records_split = numpy.where(diff_x)[0]+1
+		records_split = numpy.insert(records_split,0,0)
+		sub_w = numpy.take(w, records_split)
+		sub_z = numpy.take(z, records_split)
+
 		#Convert extra attributes to integer (when value is available)
 		for p,v in enumerate(x):
 			if sub_w[p] is not pandas.NaT:
@@ -217,7 +333,7 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 	except:
 		pass
 
-	historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False,ncores=singleNcores)
+	historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='datacube_name',metadata_value='historical_'+measure, display=False)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='start_date',metadata_value=str(times[0].date()), display=False)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='end_date',metadata_value=str(times[-1].date()), display=False)

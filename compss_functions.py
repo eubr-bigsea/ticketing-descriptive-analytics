@@ -20,9 +20,9 @@ def compssAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, pol
 def compssExtractFromFile(inputFolder, inputName):
 	return internal.internalExtractFromFile(inputFolder, inputName)
 
-@task(sub_times=IN, time_val=IN, returns=numpy.ndarray)
-def compssTransform(sub_times, time_val):
-	return internal.internalTransform(sub_times, time_val)
+@task(sub_x=IN, sub_y=IN, sub_times=IN, x=IN, y=IN, time_val=IN, returns=numpy.ndarray)
+def compssTransform(sub_x, sub_y, sub_times, x, y, time_val):
+	return internal.internalTransform(sub_x, sub_y, sub_times, x, y, time_val)
 
 #Functions for Ophidia aggregations
 @task(startCube=IN, metric=IN, parallelNcores=IN, user=IN, pwd=IN, host=IN, port=IN, returns=cube.Cube)

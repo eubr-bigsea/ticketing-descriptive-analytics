@@ -1,4 +1,4 @@
-import sys, os, shutil, subprocess, json, pandas
+import sys, os, shutil, subprocess, json, pandas, numpy
 from PyOphidia import cube, client
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import common_functions as common
@@ -61,12 +61,22 @@ def internalExtractFromFile(inputFolder, inputName):
 
 	return None
 
-def internalTransform(sub_times, time_val):
-	results = []
-	for idx, ar in enumerate(sub_times):
-		results.append(common.aggregateData((ar, time_val)))
+def internalTransform(sub_x, sub_y, sub_times, x, y, time_val):
 
-	return results
+	#We assume the function will work on a subset of continuos rows
+	from bisect import bisect_left
+	first_x_index = (bisect_left(x, sub_x[0]))
+	last_x_index = (bisect_left(x, sub_x[-1]))
+
+	x_len = last_x_index - first_x_index + 1
+
+	measure = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
+	for idx, ar in enumerate(sub_times):
+		x_index = (bisect_left(x, sub_x[idx]))
+		y_index = (bisect_left(y, sub_y[idx]))
+		measure[(x_index-first_x_index), y_index, :] = common.aggregateData((ar, time_val))
+
+	return measure
 
 
 #Functions for Ophidia aggregations

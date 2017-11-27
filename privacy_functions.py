@@ -24,7 +24,7 @@ def anonymize3File(anonymizationBin, inputName, inputFolder, outputFolder, polic
 			print("Anonymizing file (Phase 3): \"" + inputName + "\"")
 
 			try:
-				proc = subprocess.check_call(["java -jar " + anonymizationBin + " " + inputFile + " " + policyFile + " " + outputFile + " " + anonymizationPath], stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT, shell=True)
+				proc = subprocess.check_call(["java -jar " + anonymizationBin + " " + anonymizationPath + " " + inputFile + " " + policyFile + " " + outputFile], stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT, shell=True)
 			except subprocess.CalledProcessError:
 				print("Unable to run anonymization tool")
 
