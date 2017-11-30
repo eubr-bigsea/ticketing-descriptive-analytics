@@ -23,6 +23,14 @@ def reducedAggregation(startCube, metric, spatialReduction, parallelNcores, user
 		from internal_functions import internalReducedAggregation
 		return internalReducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port)
 
+def verticalAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, mode):
+	if mode == 'compss':
+		from compss_functions import compssVerticalAggregation
+		return compssVerticalAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port)
+	else:
+		from internal_functions import internalVerticalAggregation
+		return internalVerticalAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port)
+
 def totalAggregation(startCube, metric, parallelNcores, user, pwd, host, port, mode):
 	if mode == 'compss':
 		from compss_functions import compssTotalAggregation
@@ -40,13 +48,7 @@ def totalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, p
 		return internalTotalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
 
 
-def buildValues(aggregation, cubeList, day):
-
-	dataList = []
-	for c in cubeList:
-		#Extract data
-		data = c.export_array(show_time='yes')
-		dataList.append(data)
+def buildValues(aggregation, dataList, day):
 
 	#Get dimension and measure values
 	mainDimData = None
@@ -156,14 +158,16 @@ def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggreg
 
 	return outFile
 
+
 def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port, mode):
 	cubeList = [0 for m in METRICS_USER]
+	mergedCube = startCube.merge(nmerge=0,ncores=1)
 	if aggregation == 'weekly-usage':
 		for i, m in enumerate(METRICS_USER):
-			cubeList[i] = reducedAggregation(startCube, m.lower(), 'w', parallelNcores, user, pwd, host, port, mode)
+			cubeList[i] = verticalAggregation(mergedCube, m.lower(), 'w', 1, user, pwd, host, port, mode)
 	elif aggregation == 'monthly-usage':
 		for i, m in enumerate(METRICS_USER):
-			cubeList[i] = reducedAggregation(startCube, m.lower(), 'M', parallelNcores, user, pwd, host, port, mode)
+			cubeList[i] = verticalAggregation(mergedCube, m.lower(), 'M', 1, user, pwd, host, port, mode)
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on

@@ -257,14 +257,14 @@ def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure):
 def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, measure):
 
 	outnc = netCDF4.Dataset(filename, 'w', format='NETCDF4')
-	time_dim = outnc.createDimension('time', len(times))
-	passenger_dim = outnc.createDimension('cod_passenger', None) # None means unlimited
+	time_dim = outnc.createDimension('time', None) # None means unlimited
+	passenger_dim = outnc.createDimension('cod_passenger', len(cod_passenger)) # None means unlimited
 	line_dim = outnc.createDimension('cod_linha', len(cod_linha)) 
 	time_var = outnc.createVariable('time', 'd', ('time',))
 	line_var = outnc.createVariable('cod_linha', numpy.int64, ('cod_linha',))
 	passenger_var = outnc.createVariable('cod_passenger', numpy.int64, ('cod_passenger',))
 
-	measure_var = outnc.createVariable('usage', numpy.float32, ('cod_passenger','cod_linha','time',), fill_value='NaN')
+	measure_var = outnc.createVariable('usage', numpy.float32, ('time','cod_linha','cod_passenger',), fill_value='NaN')
 
 	#Set metadata
 	time_var.units = 'hours since 2015-1-1 00:00:00' 
@@ -273,12 +273,15 @@ def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, me
 	time_var.long_name = 'time'
 	time_var.axis = 'T'
 
-	line_var.axis = "Y" ;
-	passenger_var.axis = "X" ;
+	line_var.axis = "X" ;
+	passenger_var.axis = "Y" ;
 
 	measure_var.standard_name = "usage"
 	measure_var.long_name = "Bus usage count"
 	measure_var.missing_value = "NaN"
+
+	#Transpose matrix
+	measure = measure.transpose((2,1,0))
 
 	time_var[:] = netCDF4.date2num(times, units = time_var.units, calendar = time_var.calendar)
 	line_var[:] = [convertASCIItoNum(str(t)) for t in cod_linha]

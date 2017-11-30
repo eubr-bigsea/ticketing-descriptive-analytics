@@ -130,10 +130,13 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			sub_times = numpy.array_split(sub_times, splits)
 			sub_x = numpy.array_split(sub_x, splits)
 			sub_y = numpy.array_split(sub_y, splits)
+
+			threadNum = len(splits) if len(splits) < multiProcesses else multiProcesses
 		else:
 			sub_times = [sub_times]
 			sub_x = [sub_x]
 			sub_y = [sub_y]
+			threadNum = 1
 
 		#Define time dimension (aggregate on time period)
 		start_date = min(t)
@@ -144,8 +147,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		#Time val contains also 24 steps for final day
 		time_val = [start_time + i*time_period for i in range(0,time_len+1)]
 
-		results = [0 for i in range(0, int(multiProcesses))]
-		for i in range(0, int(multiProcesses)):
+		results = [0 for i in range(0, int(threadNum))]
+		for i in range(0, int(threadNum)):
 			if mode == 'compss':
 				from compss_functions import compssTransform
 				results[i] = compssTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
@@ -247,10 +250,12 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			sub_times = numpy.array_split(sub_times, splits)
 			sub_x = numpy.array_split(sub_x, splits)
 			sub_y = numpy.array_split(sub_y, splits)
+			threadNum = len(splits) if len(splits) < multiProcesses else multiProcesses
 		else:
 			sub_times = [sub_times]
 			sub_x = [sub_x]
 			sub_y = [sub_y]
+			threadNum = 1
 
 		#Define time dimension (aggregate on time period)
 		start_date = min(t)
@@ -261,8 +266,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		#Time val contains also 24 steps for final day
 		time_val = [start_time + i*time_period for i in range(0,time_len+1)]
 
-		results = [0 for i in range(0, int(multiProcesses))]
-		for i in range(0, int(multiProcesses)):
+		results = [0 for i in range(0, int(threadNum))]
+		for i in range(0, int(threadNum)):
 			if mode == 'compss':
 				from compss_functions import compssTransform
 				results[i] = compssTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
@@ -333,7 +338,10 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 	except:
 		pass
 
-	historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores)
+	if procType == "busUsage":
+		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+	elif procType == "passengerUsage":
+		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='datacube_name',metadata_value='historical_'+measure, display=False)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='start_date',metadata_value=str(times[0].date()), display=False)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='end_date',metadata_value=str(times[-1].date()), display=False)
