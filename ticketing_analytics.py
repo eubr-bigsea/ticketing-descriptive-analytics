@@ -8,6 +8,7 @@ import descriptive_stats as dstat
 import ticketing_etl as etl
 import ConfigParser
 import tarfile
+import datetime
 
 if __name__ == "__main__":
 
@@ -65,6 +66,10 @@ if __name__ == "__main__":
 		benchmark = config.get('main', 'benchmark')
 	else:
 		benchmark = False
+	if config.has_option('main', 'ophidiaLogging'):
+		ophLog = config.get('main', 'ophidiaLogging')
+	else:
+		ophLog = False
 
 	if config.has_option('ophidia', 'user'):
 		user = config.get('ophidia', 'user')
@@ -131,6 +136,13 @@ if __name__ == "__main__":
 	if not os.path.exists(tmpFolder):
 	    os.makedirs(tmpFolder)
 
+	if ophLog == True:
+		import logging
+		import inspect
+		logging.basicConfig(filename='out.log',level=logging.DEBUG,filemode='a')
+		logging.debug('[%s] [%s - %s] ****START LOG****', str(datetime.now()), str(frame.filename), str(frame.lineno))
+
+
 	#Run anonymization
 	print("*************************************************")
 
@@ -186,7 +198,7 @@ if __name__ == "__main__":
 	print("Running step 3 -> Loading")
 
 	#Import into Ophidia
-	etl.loadOphidia(outFileRef, times, singleNcores, user, password, hostname, port, procType, distribution)	
+	etl.loadOphidia(outFileRef, times, singleNcores, user, password, hostname, port, procType, distribution, ophLog)	
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 	print("End of ETL process")
@@ -200,7 +212,7 @@ if __name__ == "__main__":
 	if procType == "passengerUsage":
 		if stats == "all" or stats == "weekly-usage":
 			print("Computing: passenger usage stats for each bus line and week in the time range")
-			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-usage", format, outputFolder, procType, mode)
+			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-usage", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 			anonymFile = privacy.anonymize3File(anonymizationBin3, outFile, outputFolder, outputFolder, policyFile3, mode)
@@ -208,7 +220,7 @@ if __name__ == "__main__":
 
 		if stats == "all" or stats == "monthly-usage":
 			print("Computing: passenger usage stats for each bus line and month in the time range")
-			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-usage", format, outputFolder, procType, mode)
+			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-usage", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 			anonymFile = privacy.anonymize3File(anonymizationBin3, outFile, outputFolder, outputFolder, policyFile3, mode)
@@ -217,52 +229,52 @@ if __name__ == "__main__":
 	elif procType == "busUsage":
 		if stats == "all" or stats == "weekdaysets-peakhours":
 			print("Computing: number of passenger stats for each hour of group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-peakhours", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-peakhours", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdaysets-lines":
 			print("Computing: number of passenger stats for each bus line and group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-peakhours":
 			print("Computing: number of passenger stats for each hour of weekday")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-peakhours", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-peakhours", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-lines":
 			print("Computing: number of passenger stats for each bus line and weekday")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-hourly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-hourly-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdaysets-hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour of group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-hourly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-hourly-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "monthly-lines":
 			print("Computing: number of passenger stats for each bus line and month in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekly-lines":
 			print("Computing: number of passenger stats for each bus line and week in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "daily-lines":
 			print("Computing: number of passenger stats for each bus line and day in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "daily-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "daily-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "hourly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "hourly-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 	print("*************************************************\n")

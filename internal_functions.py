@@ -3,6 +3,11 @@ from PyOphidia import cube, client
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import common_functions as common
 
+import timeit
+import logging
+import inspect
+import datetime
+
 def internalAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, policyFile):
 
 	inputFile = os.path.join(inputFolder, inputName)
@@ -80,39 +85,97 @@ def internalTransform(sub_x, sub_y, sub_times, x, y, time_val):
 
 
 #Functions for Ophidia aggregations
-def internalSimpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port):
+def internalSimpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port, logFlag=False):
 	cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time = timeit.default_timer()
 	aggregatedCube = startCube.aggregate(group_size='all',operation=metric,ncores=parallelNcores)
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		start_time = timeit.default_timer()
 	data = aggregatedCube.export_array(show_time='yes')
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] EXPLORE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
 	return data
 
-def internalReducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port):
+def internalReducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, logFlag=False):
 	cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time = timeit.default_timer()
 	reducedCube = startCube.reduce2(dim='time',concept_level=spatialReduction,operation=metric,ncores=parallelNcores)
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] REDUCE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		start_time = timeit.default_timer()
 	data = reducedCube.export_array(show_time='yes')
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] EXPLORE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
 	return data
 
-def internalVerticalAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port):
+def internalVerticalAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, logFlag=False):
 	cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time = timeit.default_timer()
 	aggregatedCube = startCube.aggregate2(dim='time',concept_level=spatialReduction,operation=metric,ncores=parallelNcores)
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] AGGREGATE2 execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		start_time = timeit.default_timer()
 	data = aggregatedCube.export_array(show_time='yes')
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] EXPLORE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
 	for k in data['measure']:
 		if(k['name'] == 'usage'):
 			k['values'] = map(list, zip(*k['values']))
 
 	return data
 
-def internalTotalAggregation(startCube, metric, parallelNcores, user, pwd, host, port):
+def internalTotalAggregation(startCube, metric, parallelNcores, user, pwd, host, port, logFlag=False):
 	cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time = timeit.default_timer()
 	reducedCube = startCube.reduce(group_size='all',operation=metric,ncores=parallelNcores)
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] REDUCE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		start_time = timeit.default_timer()
 	data = reducedCube.export_array(show_time='yes')
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] EXPLORE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
 	return data
 
-def internalTotalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port):
+def internalTotalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port, logFlag=False):
 	cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time = timeit.default_timer()
 	reducedCube1 = startCube.apply(query="oph_concat('OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT','OPH_FLOAT',oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'1:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'3:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'5:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'7:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'9:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'11:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'13:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'15:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'17:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'19:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'21:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'23:24:end'),'OPH_"+metric+"'))", check_type='no', measure_type='manual',ncores=parallelNcores)
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] REDUCE PART1 execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		start_time = timeit.default_timer()
 	reducedCube2 = startCube.apply(query="oph_concat('OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT','OPH_FLOAT',oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'2:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'4:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'6:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'8:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'10:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'12:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'14:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'16:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'18:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'20:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'22:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'24:24:end'),'OPH_"+metric+"'))", check_type='no', measure_type='manual',ncores=parallelNcores)
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] REDUCE PART2 execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		start_time = timeit.default_timer()
 	mergedCube = cube.Cube.mergecubes(cubes=reducedCube1.pid+'|'+reducedCube2.pid, ncores=parallelNcores)
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] MERGECUBES execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		start_time = timeit.default_timer()
 	data = mergedCube.export_array(show_time='yes')
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] EXPLORE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
 	return data
 
