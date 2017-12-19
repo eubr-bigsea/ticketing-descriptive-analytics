@@ -342,10 +342,9 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 		import timeit
 		import logging
 		import inspect
-
 		frame = inspect.getframeinfo(inspect.currentframe())
-
 		start_time = timeit.default_timer()
+
 	if procType == "busUsage":
 		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 	elif procType == "passengerUsage":
@@ -353,7 +352,7 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
-		logging.debug('[%s] [%s - %s] IMPORTNC execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		logging.debug('[%s] [%s - %s] IMPORTNC execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='datacube_name',metadata_value='historical_'+measure, display=False)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='start_date',metadata_value=str(times[0].date()), display=False)

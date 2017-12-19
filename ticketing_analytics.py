@@ -8,7 +8,6 @@ import descriptive_stats as dstat
 import ticketing_etl as etl
 import ConfigParser
 import tarfile
-import datetime
 
 if __name__ == "__main__":
 
@@ -64,10 +63,12 @@ if __name__ == "__main__":
 		multiProcesses = 1
 	if config.has_option('main', 'benchmark'):
 		benchmark = config.get('main', 'benchmark')
+		benchmark = (benchmark == 'True')
 	else:
 		benchmark = False
 	if config.has_option('main', 'ophidiaLogging'):
 		ophLog = config.get('main', 'ophidiaLogging')
+		ophLog = (ophLog == 'True')
 	else:
 		ophLog = False
 
@@ -137,10 +138,13 @@ if __name__ == "__main__":
 	    os.makedirs(tmpFolder)
 
 	if ophLog == True:
+		from datetime import datetime
 		import logging
 		import inspect
+		frame = inspect.getframeinfo(inspect.currentframe())
 		logging.basicConfig(filename='out.log',level=logging.DEBUG,filemode='a')
-		logging.debug('[%s] [%s - %s] ****START LOG****', str(datetime.now()), str(frame.filename), str(frame.lineno))
+		logging.debug('[%s] [%s - %s] ****START LOG****', str(datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno))
+		logging.debug('[%s] [%s - %s] singleNcores %d, parallelNcores %d', str(datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), int(singleNcores), int(parallelNcores))
 
 
 	#Run anonymization

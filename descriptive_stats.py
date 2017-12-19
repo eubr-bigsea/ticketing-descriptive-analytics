@@ -8,6 +8,7 @@ METRICS_USER = ['MIN', 'MAX', 'COUNT', 'SUM']
 
 import timeit
 import logging 
+import inspect
 
 #Functions for Ophidia aggregations
 def simpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port, mode, logFlag):
@@ -170,7 +171,7 @@ def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, a
 	mergedCube = startCube.merge(nmerge=0,ncores=1)
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
-		logging.debug('[%s] [%s - %s] MERGE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		logging.debug('[%s] [%s - %s] MERGE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
 	if aggregation == 'weekly-usage':
 		for i, m in enumerate(METRICS_USER):
@@ -228,7 +229,7 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 		subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
 		if logFlag == True:
 			end_time = timeit.default_timer() - start_time
-			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), day, str(end_time))
+			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
 
 		for i, m in enumerate(METRICS_BUS):
 			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
@@ -268,7 +269,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 	reducedCube = startCube.reduce2(dim='time',concept_level='d',operation='sum',ncores=parallelNcores)
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
-		logging.debug('[%s] [%s - %s] REDUCE2 execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		logging.debug('[%s] [%s - %s] REDUCE2 execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
 	cubeList = [[0 for m in METRICS_BUS] for k in weekDays]
 	for idx, day in enumerate(weekDays):
@@ -291,7 +292,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 		subsettedCube = reducedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
 		if logFlag == True:
 			end_time = timeit.default_timer() - start_time
-			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), day, str(end_time))
+			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
 
 		for i, m in enumerate(METRICS_BUS):
 			cubeList[idx][i] = totalAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
@@ -331,12 +332,12 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 	mergedCube = startCube.merge(nmerge=0,ncores=1)
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
-		logging.debug('[%s] [%s - %s] MERGE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		logging.debug('[%s] [%s - %s] MERGE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 		start_time = timeit.default_timer()
 	aggregatedCube = mergedCube.aggregate(group_size='all',operation='sum',ncores=1)
 	if logFile == True:
 		end_time = timeit.default_timer() - start_time
-		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
 	cubeList = [[0 for m in METRICS_BUS] for k in weekDays]
 	for idx, day in enumerate(weekDays):
@@ -359,7 +360,7 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 		subsettedCube = aggregatedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
 		if logFlag == True:
 			end_time = timeit.default_timer() - start_time
-			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), day, str(end_time))
+			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
 
 		#cubeList = [0 for m in METRICS_BUS]
 		for i, m in enumerate(METRICS_BUS):
@@ -432,7 +433,7 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 	aggregatedCube = historicalCube.aggregate(group_size='all',operation='sum',ncores=singleNcores)
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
-		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.now()), str(frame.filename), str(frame.lineno), str(end_time))
+		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
 	#Subset on weekdays (monday is 0)
 	numDays = (endDate - startDate).days + 1
