@@ -133,16 +133,43 @@ def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggreg
 	cubeList = [0 for m in METRICS_BUS]
 	if aggregation == 'weekly-lines':
 		for i, m in enumerate(METRICS_BUS):
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
 			cubeList[i] = reducedAggregation(startCube, m.lower(), 'w', parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] BASIC LINE WEEK %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
+
 	elif aggregation == 'monthly-lines':
 		for i, m in enumerate(METRICS_BUS):
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
 			cubeList[i] = reducedAggregation(startCube, m.lower(), 'M', parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] BASIC LINE MONTH  %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
+
 	elif aggregation == 'daily-lines':
 		for i, m in enumerate(METRICS_BUS):
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
 			cubeList[i] = reducedAggregation(startCube, m.lower(), 'd', parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] BASIC LINE DAY %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
+
 	elif aggregation == 'hourly-lines':
 		for i, m in enumerate(METRICS_BUS):
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
 			cubeList[i] = simpleAggregation(startCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] BASIC LINE HOUR %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -175,10 +202,22 @@ def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, a
 
 	if aggregation == 'weekly-usage':
 		for i, m in enumerate(METRICS_USER):
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
 			cubeList[i] = verticalAggregation(mergedCube, m.lower(), 'w', 1, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] USER WEEKLY USAGE %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
 	elif aggregation == 'monthly-usage':
 		for i, m in enumerate(METRICS_USER):
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
 			cubeList[i] = verticalAggregation(mergedCube, m.lower(), 'M', 1, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] USER MONTHLY USAGE %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -232,7 +271,13 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
 
 		for i, m in enumerate(METRICS_BUS):
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
 			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] HOURLY LINES %s %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -295,7 +340,13 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
 
 		for i, m in enumerate(METRICS_BUS):
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
 			cubeList[idx][i] = totalAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] DAILY LINES %s %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -364,7 +415,14 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 
 		#cubeList = [0 for m in METRICS_BUS]
 		for i, m in enumerate(METRICS_BUS):
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
 			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
+
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] PEAKHOURS %s %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -462,3 +520,4 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 	#cube.Cube.deletecontainer(container=str(sample_container), delete_type='physical', hidden='no')
 
 	return outFile
+
