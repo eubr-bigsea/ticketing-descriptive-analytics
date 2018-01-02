@@ -204,12 +204,15 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
 		else:
 			for j in weekDaysId[idx]:
-				filter_list = filter_list + common.buildSubsetFilter(startDate, numDays, j) + ","
+				tmp_filter_list = common.buildSubsetFilter(startDate, numDays, j)
+				if not tmp_filter_list:
+					continue
+				filter_list = filter_list + tmp_filter_list + ","
 
 			filter_list = filter_list[:-1]
 
 		if not filter_list:
-			exit("ERROR: Subset filter creation")
+			continue
 
 		#Extract relevant days
 		subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
@@ -222,6 +225,8 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 		cubeList = compss_wait_on(cubeList)
 
 	for idx, day in enumerate(weekDays):
+		if cubeList[idx][0] == 0:
+			continue
 		#Get dimension and measure values
 		codLinhaData = None
 		dateData = None
@@ -256,12 +261,15 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
 		else:
 			for j in weekDaysId[idx]:
-				filter_list = filter_list + common.buildSubsetFilter(startDate, numDays, j) + ","
+				tmp_filter_list = common.buildSubsetFilter(startDate, numDays, j)
+				if not tmp_filter_list:
+					continue
+				filter_list = filter_list + tmp_filter_list + ","
 
 			filter_list = filter_list[:-1]
 
 		if not filter_list:
-			exit("ERROR: Subset filter creation")
+			continue
 
 		#Extract relevant days
 		subsettedCube = reducedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
@@ -274,6 +282,8 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 		cubeList = compss_wait_on(cubeList)
 
 	for idx, day in enumerate(weekDays):
+		if cubeList[idx][0] == 0:
+			continue
 		#Get dimension and measure values
 		codLinhaData = None
 		dateData = None
@@ -309,12 +319,15 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
 		else:
 			for j in weekDaysId[idx]:
-				filter_list = filter_list + common.buildSubsetFilter(startDate, numDays, j) + ","
+				tmp_filter_list = common.buildSubsetFilter(startDate, numDays, j)
+				if not tmp_filter_list:
+					continue
+				filter_list = filter_list + tmp_filter_list + ","
 
 			filter_list = filter_list[:-1]
 
 		if not filter_list:
-			exit("ERROR: Subset filter creation")
+			continue
 
 		#Extract relevant days
 		subsettedCube = aggregatedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
@@ -328,6 +341,8 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 		cubeList = compss_wait_on(cubeList)
 
 	for idx, day in enumerate(weekDays):
+		if cubeList[idx][0] == 0:
+			continue
 		#Get dimension and measure values
 		codLinhaData = None
 		dateData = None
@@ -343,7 +358,7 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 	return outFile
 
 
-def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, processing, format, outputFolder, procType, mode):
+def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, processing, format, outputFolder, procType, mode):
 
 	if procType == "busUsage":
 		measure = "passengers"
@@ -363,7 +378,13 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 	if not data['response'][0]['objcontent'][0]['rowvalues']:
 		exit("ERROR: Historical datacube not found")
 	else:
-		historicalCubePid = data['response'][0]['objcontent'][0]['rowvalues'][0][0]
+		for c in data['response'][0]['objcontent'][0]['rowvalues']:
+			if c[0] == cubePid:
+				historicalCubePid = c[0]
+				break
+
+	if not historicalCubePid:
+		exit("ERROR: Historical datacube not found")
 
 	historicalCube = cube.Cube(pid=historicalCubePid)
 	#Get Historical start/end date from metadata

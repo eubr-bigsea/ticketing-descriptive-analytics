@@ -13,6 +13,7 @@ if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
 	parser.add_argument('-d','--distribution', default="distributed", help='If the components are distributed or not', choices=['distributed','local'])
+	parser.add_argument('-i','--input_cube', help='The ID of the input datecube in case no ETL has to be performed')
 	subparsers = parser.add_subparsers(dest="type", help='Type of index to evaluate')
 
 	parserA = subparsers.add_parser('bus-usage',description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
@@ -127,70 +128,77 @@ if __name__ == "__main__":
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
 
-	#Create tmp folder
-	if not os.path.exists(tmpFolder):
-	    os.makedirs(tmpFolder)
+	if args.input_cube:
+		print("No ETL performed") 
+		cubePid = args.input_cube	
+		print("Ophidia data cube ID: " + str(cubePid))
 
-	#Run anonymization
-	print("*************************************************")
-
-	if benchmark == True:
-		import timeit
-		global_start_time = timeit.default_timer()
-
-	anonymFile = [0 for m in range(0,len(os.listdir(inputFolder)))]
-	for i, e in enumerate(sorted(os.listdir(inputFolder))):
-		if benchmark == True:
-			start_time = timeit.default_timer()
-		anonymFile[i] = privacy.anonymize1File(anonymizationBin1, e, inputFolder, tmpFolder, policyFile1, mode)
-		if benchmark == True:
-			final_time = timeit.default_timer() - start_time
-			print("Time required on file: "+ str(final_time))
-
-	if benchmark == True:
-		anonymFile = compss_wait_on(anonymFile)
-		global_final_time = timeit.default_timer() - global_start_time
-		print("Required time: "+ str(global_final_time))
-
-	print time.strftime('%Y-%m-%d %H:%M:%S')
-	print("*************************************************\n")
-
-	print("*************************************************")
-	print("Starting ETL process")
-	print("Running step 1 -> Extraction")
-
-	data = etl.extractPhase(anonymFile, tmpFolder, procType, mode)
-
-	print time.strftime('%Y-%m-%d %H:%M:%S')
-	print("Running step 2 -> Transformation")
-
-	times , outFile = etl.transformToNetCDF(data, tmpFolder, multiProcesses, procType, mode)
-
-	print time.strftime('%Y-%m-%d %H:%M:%S')
-
-	outFileRef = ""
-	if distribution in "distributed":
-		#Move file to Ophidia instance
-		print("Moving file from COMPSs to Ophidia")
-		outName = outFile.rsplit("/", 1)[1]
-		with tarfile.open(outFile + ".tar.gz", "w:gz") as tar:
-			tar.add(outFile,recursive=False,arcname=outName)
-			tar.close()
-
-		#Build Web Server url
-		outFileRef = webServerUrl + "/" + outName + ".tar.gz"
 	else:
-		outFileRef = outFile
+		#Create tmp folder
+		if not os.path.exists(tmpFolder):
+			os.makedirs(tmpFolder)
 
-	print time.strftime('%Y-%m-%d %H:%M:%S')
-	print("Running step 3 -> Loading")
+		#Run anonymization
+		print("*************************************************")
 
-	#Import into Ophidia
-	etl.loadOphidia(outFileRef, times, singleNcores, user, password, hostname, port, procType, distribution)	
+		if benchmark == True:
+			import timeit
+			global_start_time = timeit.default_timer()
 
-	print time.strftime('%Y-%m-%d %H:%M:%S')
-	print("End of ETL process")
-	print("*************************************************\n")
+		anonymFile = [0 for m in range(0,len(os.listdir(inputFolder)))]
+		for i, e in enumerate(sorted(os.listdir(inputFolder))):
+			if benchmark == True:
+				start_time = timeit.default_timer()
+			anonymFile[i] = privacy.anonymize1File(anonymizationBin1, e, inputFolder, tmpFolder, policyFile1, mode)
+			if benchmark == True:
+				final_time = timeit.default_timer() - start_time
+				print("Time required on file: "+ str(final_time))
+
+		if benchmark == True:
+			anonymFile = compss_wait_on(anonymFile)
+			global_final_time = timeit.default_timer() - global_start_time
+			print("Required time: "+ str(global_final_time))
+
+		print time.strftime('%Y-%m-%d %H:%M:%S')
+		print("*************************************************\n")
+
+		print("*************************************************")
+		print("Starting ETL process")
+		print("Running step 1 -> Extraction")
+
+		data = etl.extractPhase(anonymFile, tmpFolder, procType, mode)
+
+		print time.strftime('%Y-%m-%d %H:%M:%S')
+		print("Running step 2 -> Transformation")
+
+		times , outFile = etl.transformToNetCDF(data, tmpFolder, multiProcesses, procType, mode)
+
+		print time.strftime('%Y-%m-%d %H:%M:%S')
+
+		outFileRef = ""
+		if distribution in "distributed":
+			#Move file to Ophidia instance
+			print("Moving file from COMPSs to Ophidia")
+			outName = outFile.rsplit("/", 1)[1]
+			with tarfile.open(outFile + ".tar.gz", "w:gz") as tar:
+				tar.add(outFile,recursive=False,arcname=outName)
+				tar.close()
+
+			#Build Web Server url
+			outFileRef = webServerUrl + "/" + outName + ".tar.gz"
+		else:
+			outFileRef = outFile
+
+		print time.strftime('%Y-%m-%d %H:%M:%S')
+		print("Running step 3 -> Loading")
+
+		#Import into Ophidia
+		cubePid = etl.loadOphidia(outFileRef, times, singleNcores, user, password, hostname, port, procType, distribution)	
+		print("Ophidia data cube ID: " + str(cubePid))
+
+		print time.strftime('%Y-%m-%d %H:%M:%S')
+		print("End of ETL process")
+		print("*************************************************\n")
 
 	#Run computations
 	print("*************************************************")
@@ -200,7 +208,7 @@ if __name__ == "__main__":
 	if procType == "passengerUsage":
 		if stats == "all" or stats == "weekly-usage":
 			print("Computing: passenger usage stats for each bus line and week in the time range")
-			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-usage", format, outputFolder, procType, mode)
+			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekly-usage", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 			anonymFile = privacy.anonymize3File(anonymizationBin3, outFile, outputFolder, outputFolder, policyFile3, mode)
@@ -208,7 +216,7 @@ if __name__ == "__main__":
 
 		if stats == "all" or stats == "monthly-usage":
 			print("Computing: passenger usage stats for each bus line and month in the time range")
-			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-usage", format, outputFolder, procType, mode)
+			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "monthly-usage", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 			anonymFile = privacy.anonymize3File(anonymizationBin3, outFile, outputFolder, outputFolder, policyFile3, mode)
@@ -217,52 +225,52 @@ if __name__ == "__main__":
 	elif procType == "busUsage":
 		if stats == "all" or stats == "weekdaysets-peakhours":
 			print("Computing: number of passenger stats for each hour of group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-peakhours", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdaysets-peakhours", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdaysets-lines":
 			print("Computing: number of passenger stats for each bus line and group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdaysets-lines", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-peakhours":
 			print("Computing: number of passenger stats for each hour of weekday")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-peakhours", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdays-peakhours", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-lines":
 			print("Computing: number of passenger stats for each bus line and weekday")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdays-lines", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdays-hourly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdays-hourly-lines", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdaysets-hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour of group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekdaysets-hourly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdaysets-hourly-lines", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "monthly-lines":
 			print("Computing: number of passenger stats for each bus line and month in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "monthly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "monthly-lines", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekly-lines":
 			print("Computing: number of passenger stats for each bus line and week in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "weekly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekly-lines", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "daily-lines":
 			print("Computing: number of passenger stats for each bus line and day in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "daily-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "daily-lines", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, "hourly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "hourly-lines", format, outputFolder, procType, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 	print("*************************************************\n")

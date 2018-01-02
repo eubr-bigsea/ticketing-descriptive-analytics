@@ -348,3 +348,5 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 
 	sys.stdout = sys.__stdout__; 
 
+	return historicalCube.pid
+
