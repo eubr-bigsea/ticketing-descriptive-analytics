@@ -6,46 +6,50 @@ import common_functions as common
 METRICS_BUS = ['MIN', 'MAX', 'AVG', 'SUM']
 METRICS_USER = ['MIN', 'MAX', 'COUNT', 'SUM']
 
+import timeit
+import logging 
+import inspect
+
 #Functions for Ophidia aggregations
-def simpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port, mode):
+def simpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port, mode, logFlag):
 	if mode == 'compss':
 		from compss_functions import compssSimpleAggregation
 		return compssSimpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
 	else:
 		from internal_functions import internalSimpleAggregation
-		return internalSimpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
+		return internalSimpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port, logFlag)
 
-def reducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, mode):
+def reducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, mode, logFlag):
 	if mode == 'compss':
 		from compss_functions import compssReducedAggregation
 		return compssReducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port)
 	else:
 		from internal_functions import internalReducedAggregation
-		return internalReducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port)
+		return internalReducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, logFlag)
 
-def verticalAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, mode):
+def verticalAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, mode, logFlag):
 	if mode == 'compss':
 		from compss_functions import compssVerticalAggregation
 		return compssVerticalAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port)
 	else:
 		from internal_functions import internalVerticalAggregation
-		return internalVerticalAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port)
+		return internalVerticalAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, logFlag)
 
-def totalAggregation(startCube, metric, parallelNcores, user, pwd, host, port, mode):
+def totalAggregation(startCube, metric, parallelNcores, user, pwd, host, port, mode, logFlag):
 	if mode == 'compss':
 		from compss_functions import compssTotalAggregation
 		return compssTotalAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
 	else:
 		from internal_functions import internalTotalAggregation
-		return internalTotalAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
+		return internalTotalAggregation(startCube, metric, parallelNcores, user, pwd, host, port, logFlag)
 
-def totalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port, mode):
+def totalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port, mode, logFlag):
 	if mode == 'compss':
 		from compss_functions import compssTotalHourlyAggregation
 		return compssTotalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
 	else:
 		from internal_functions import internalTotalHourlyAggregation
-		return internalTotalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port)
+		return internalTotalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port, logFlag)
 
 
 def buildValues(aggregation, dataList, day):
@@ -125,20 +129,47 @@ def buildValues(aggregation, dataList, day):
 	return mainDimData, dateData, measureData
 
 
-def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port, mode):
+def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port, mode, logFlag):
 	cubeList = [0 for m in METRICS_BUS]
 	if aggregation == 'weekly-lines':
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = reducedAggregation(startCube, m.lower(), 'w', parallelNcores, user, pwd, host, port, mode)
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
+			cubeList[i] = reducedAggregation(startCube, m.lower(), 'w', parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] BASIC LINE WEEK %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
+
 	elif aggregation == 'monthly-lines':
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = reducedAggregation(startCube, m.lower(), 'M', parallelNcores, user, pwd, host, port, mode)
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
+			cubeList[i] = reducedAggregation(startCube, m.lower(), 'M', parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] BASIC LINE MONTH  %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
+
 	elif aggregation == 'daily-lines':
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = reducedAggregation(startCube, m.lower(), 'd', parallelNcores, user, pwd, host, port, mode)
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
+			cubeList[i] = reducedAggregation(startCube, m.lower(), 'd', parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] BASIC LINE DAY %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
+
 	elif aggregation == 'hourly-lines':
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[i] = simpleAggregation(startCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
+			cubeList[i] = simpleAggregation(startCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] BASIC LINE HOUR %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -159,15 +190,34 @@ def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggreg
 	return outFile
 
 
-def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port, mode):
+def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port, mode, logFlag):
 	cubeList = [0 for m in METRICS_USER]
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time = timeit.default_timer()
 	mergedCube = startCube.merge(nmerge=0,ncores=1)
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] MERGE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
+
 	if aggregation == 'weekly-usage':
 		for i, m in enumerate(METRICS_USER):
-			cubeList[i] = verticalAggregation(mergedCube, m.lower(), 'w', 1, user, pwd, host, port, mode)
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
+			cubeList[i] = verticalAggregation(mergedCube, m.lower(), 'w', 1, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] USER WEEKLY USAGE %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
 	elif aggregation == 'monthly-usage':
 		for i, m in enumerate(METRICS_USER):
-			cubeList[i] = verticalAggregation(mergedCube, m.lower(), 'M', 1, user, pwd, host, port, mode)
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
+			cubeList[i] = verticalAggregation(mergedCube, m.lower(), 'M', 1, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] USER MONTHLY USAGE %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -187,7 +237,7 @@ def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, a
 
 	return outFile
 
-def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode):
+def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode, logFlag):
 	#weekdays array
 	if aggregation == 'weekdays-hourly-lines': 
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
@@ -215,10 +265,22 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 			continue
 
 		#Extract relevant days
+		if logFlag == True:
+			frame = inspect.getframeinfo(inspect.currentframe())
+			start_time = timeit.default_timer()
 		subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
+		if logFlag == True:
+			end_time = timeit.default_timer() - start_time
+			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
 
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
+			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] HOURLY LINES %s %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -241,7 +303,7 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 
 	return outFile
 
-def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode):
+def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode, logFlag):
 	#weekdays array
 	if aggregation == 'weekdays-lines': 
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
@@ -251,7 +313,13 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 		weekDaysId = [[6,7],[1,5],[2,3,4]]
 
 	#Aggregate at day level once
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time = timeit.default_timer()
 	reducedCube = startCube.reduce2(dim='time',concept_level='d',operation='sum',ncores=parallelNcores)
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] REDUCE2 execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
 	cubeList = [[0 for m in METRICS_BUS] for k in weekDays]
 	for idx, day in enumerate(weekDays):
@@ -272,10 +340,21 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 			continue
 
 		#Extract relevant days
+		if logFlag == True:
+			start_time = timeit.default_timer()
 		subsettedCube = reducedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
+		if logFlag == True:
+			end_time = timeit.default_timer() - start_time
+			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
 
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[idx][i] = totalAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
+			cubeList[idx][i] = totalAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] DAILY LINES %s %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -298,7 +377,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 
 	return outFile
 
-def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode):
+def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode, logFlag):
 	#weekdays array
 	if aggregation == 'weekdays-peakhours': 
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
@@ -308,8 +387,18 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 		weekDaysId = [[6,7],[1,5],[2,3,4]]
 
 	#Sum values on all lines once
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time = timeit.default_timer()
 	mergedCube = startCube.merge(nmerge=0,ncores=1)
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] MERGE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
+		start_time = timeit.default_timer()
 	aggregatedCube = mergedCube.aggregate(group_size='all',operation='sum',ncores=1)
+	if logFile == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
 	cubeList = [[0 for m in METRICS_BUS] for k in weekDays]
 	for idx, day in enumerate(weekDays):
@@ -330,11 +419,23 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 			continue
 
 		#Extract relevant days
+		if logFlag == True:
+			start_time = timeit.default_timer()
 		subsettedCube = aggregatedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
+		if logFlag == True:
+			end_time = timeit.default_timer() - start_time
+			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
 
 		#cubeList = [0 for m in METRICS_BUS]
 		for i, m in enumerate(METRICS_BUS):
-			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode)
+			if logFlag == True:
+				frame = inspect.getframeinfo(inspect.currentframe())
+				start_time = timeit.default_timer()
+			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
+
+			if logFlag == True:
+				end_time = timeit.default_timer() - start_time
+				logging.debug('[%s] [%s - %s] PEAKHOURS %s %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -358,7 +459,7 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 	return outFile
 
 
-def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, processing, format, outputFolder, procType, mode):
+def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, processing, format, outputFolder, procType, mode, logFlag):
 
 	if procType == "busUsage":
 		measure = "passengers"
@@ -405,7 +506,13 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 		endDate = data['response'][1]['objcontent'][0]['rowvalues'][0][4]
 		endDate = datetime.datetime.strptime(endDate, "%Y-%m-%d")
 
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time = timeit.default_timer()
 	aggregatedCube = historicalCube.aggregate(group_size='all',operation='sum',ncores=singleNcores)
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
 	#Subset on weekdays (monday is 0)
 	numDays = (endDate - startDate).days + 1
@@ -413,19 +520,19 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 
 	if processing == 'hourly-lines' or processing == 'daily-lines' or processing == 'weekly-lines' or processing == 'monthly-lines':
 		#Description: hourly/daily/weekly/monthly aggregated stats for each bus line and time range
-		outFile = basicLineAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port, mode)
+		outFile = basicLineAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port, mode, logFlag)
 	elif processing == 'weekdays-hourly-lines' or processing == 'weekdaysets-hourly-lines':
 		#Description: hourly aggregated stats for each bus line and weekday or set of weekdays
-		outFile = weekdayLinesAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port, mode)
+		outFile = weekdayLinesAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port, mode, logFlag)
 	elif processing == 'weekdays-lines' or processing == 'weekdaysets-lines':
 		#Description: daily aggregated stats for each bus line and weekday or set of weekdays
-		outFile = weekdayLinesTotalAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port, mode)
+		outFile = weekdayLinesTotalAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port, mode, logFlag)
 	elif processing == 'weekdays-peakhours' or processing == 'weekdaysets-peakhours':
 		#Description: hourly aggregated stats for each weekday or set of weekdays (on all lines)
-		outFile = peakhourAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port, mode)
+		outFile = peakhourAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port, mode, logFlag)
 	elif processing == 'weekly-usage' or processing == 'monthly-usage':
 		#Description: monthly aggregated stats for each bus user
-		outFile = basicPassengerAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port, mode)
+		outFile = basicPassengerAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port, mode, logFlag)
 	else:
 		print("Aggregation not recognized")
 
@@ -434,3 +541,4 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 	#cube.Cube.deletecontainer(container=str(sample_container), delete_type='physical', hidden='no')
 
 	return outFile
+

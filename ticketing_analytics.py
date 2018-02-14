@@ -64,8 +64,14 @@ if __name__ == "__main__":
 		multiProcesses = 1
 	if config.has_option('main', 'benchmark'):
 		benchmark = config.get('main', 'benchmark')
+		benchmark = (benchmark == 'True')
 	else:
 		benchmark = False
+	if config.has_option('main', 'ophidiaLogging'):
+		ophLog = config.get('main', 'ophidiaLogging')
+		ophLog = (ophLog == 'True')
+	else:
+		ophLog = False
 
 	if config.has_option('ophidia', 'user'):
 		user = config.get('ophidia', 'user')
@@ -127,6 +133,15 @@ if __name__ == "__main__":
 		exit(1)
 
 	print time.strftime('%Y-%m-%d %H:%M:%S')
+
+	if ophLog == True:
+		from datetime import datetime
+		import logging
+		import inspect
+		frame = inspect.getframeinfo(inspect.currentframe())
+		logging.basicConfig(filename='out.log',level=logging.DEBUG,filemode='a')
+		logging.debug('[%s] [%s - %s] ****START LOG****', str(datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno))
+		logging.debug('[%s] [%s - %s] singleNcores %d, parallelNcores %d', str(datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), int(singleNcores), int(parallelNcores))
 
 	if args.input_cube:
 		print("No ETL performed") 
@@ -193,7 +208,7 @@ if __name__ == "__main__":
 		print("Running step 3 -> Loading")
 
 		#Import into Ophidia
-		cubePid = etl.loadOphidia(outFileRef, times, singleNcores, user, password, hostname, port, procType, distribution)	
+		cubePid = etl.loadOphidia(outFileRef, times, singleNcores, user, password, hostname, port, procType, distribution, ophLog)	
 		print("Ophidia data cube ID: " + str(cubePid))
 
 		print time.strftime('%Y-%m-%d %H:%M:%S')
@@ -208,7 +223,7 @@ if __name__ == "__main__":
 	if procType == "passengerUsage":
 		if stats == "all" or stats == "weekly-usage":
 			print("Computing: passenger usage stats for each bus line and week in the time range")
-			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekly-usage", format, outputFolder, procType, mode)
+			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekly-usage", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 			anonymFile = privacy.anonymize3File(anonymizationBin3, outFile, outputFolder, outputFolder, policyFile3, mode)
@@ -216,7 +231,7 @@ if __name__ == "__main__":
 
 		if stats == "all" or stats == "monthly-usage":
 			print("Computing: passenger usage stats for each bus line and month in the time range")
-			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "monthly-usage", format, outputFolder, procType, mode)
+			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "monthly-usage", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 			anonymFile = privacy.anonymize3File(anonymizationBin3, outFile, outputFolder, outputFolder, policyFile3, mode)
@@ -225,52 +240,52 @@ if __name__ == "__main__":
 	elif procType == "busUsage":
 		if stats == "all" or stats == "weekdaysets-peakhours":
 			print("Computing: number of passenger stats for each hour of group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdaysets-peakhours", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdaysets-peakhours", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdaysets-lines":
 			print("Computing: number of passenger stats for each bus line and group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdaysets-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdaysets-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-peakhours":
 			print("Computing: number of passenger stats for each hour of weekday")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdays-peakhours", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdays-peakhours", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-lines":
 			print("Computing: number of passenger stats for each bus line and weekday")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdays-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdays-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdays-hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdays-hourly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdays-hourly-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekdaysets-hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour of group of weekdays")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdaysets-hourly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekdaysets-hourly-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "monthly-lines":
 			print("Computing: number of passenger stats for each bus line and month in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "monthly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "monthly-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "weekly-lines":
 			print("Computing: number of passenger stats for each bus line and week in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "weekly-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "daily-lines":
 			print("Computing: number of passenger stats for each bus line and day in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "daily-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "daily-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		if stats == "all" or stats == "hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour in the time range")
-			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "hourly-lines", format, outputFolder, procType, mode)
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, "hourly-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 	print("*************************************************\n")
