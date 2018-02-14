@@ -326,6 +326,15 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 	sys.stdout = open(os.devnull, 'w')
 
 	cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
+
+
+	if logFlag == True:
+		import timeit
+		import logging
+		import inspect
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time = timeit.default_timer()
+
 	if distribution in "distributed":
 		cube.Cube.script(script='bigsea_retrieve',args=fileRef+'|token',display=False)
 		data = json.loads(cube.Cube.client.last_response)
@@ -333,15 +342,16 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 	else:
 		inputFile = fileRef
 
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] SCRIPT execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
+
 	try:
 		cube.Cube.createcontainer(container='bigsea',dim='cod_passenger|cod_linha|cod_veiculo|time',dim_type='long|long|long|double',hierarchy='oph_base|oph_base|oph_base|oph_time',display=False,base_time='2015-01-01 00:00:00',calendar='gregorian',units='h')
 	except:
 		pass
 
 	if logFlag == True:
-		import timeit
-		import logging
-		import inspect
 		frame = inspect.getframeinfo(inspect.currentframe())
 		start_time = timeit.default_timer()
 

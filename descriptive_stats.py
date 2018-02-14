@@ -468,6 +468,10 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 	else:
 		raise RuntimeError("Type of processing not recognized")
 
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time_begin = timeit.default_timer()
+
 	#Initialize
 	sys.stdout = open(os.devnull, 'w')
 	cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
@@ -535,6 +539,10 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 		outFile = basicPassengerAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port, mode, logFlag)
 	else:
 		print("Aggregation not recognized")
+
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time_begin
+		logging.debug('[%s] [%s - %s] #%s# execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), processing, str(end_time))
 
 	#Remove tmp cubes
 	cube.Cube.client.submit("oph_delete cube=[container=bigsea;level=1|2|3|4|5|6]")

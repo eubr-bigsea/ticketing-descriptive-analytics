@@ -138,6 +138,8 @@ if __name__ == "__main__":
 		from datetime import datetime
 		import logging
 		import inspect
+		import timeit
+		start_time = timeit.default_timer()
 		frame = inspect.getframeinfo(inspect.currentframe())
 		logging.basicConfig(filename='out.log',level=logging.DEBUG,filemode='a')
 		logging.debug('[%s] [%s - %s] ****START LOG****', str(datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno))
@@ -174,6 +176,9 @@ if __name__ == "__main__":
 			global_final_time = timeit.default_timer() - global_start_time
 			print("Required time: "+ str(global_final_time))
 
+		#Drop empty cells in array
+		anonymFile = [v for v in anonymFile if v is not None]
+
 		print time.strftime('%Y-%m-%d %H:%M:%S')
 		print("*************************************************\n")
 
@@ -207,9 +212,20 @@ if __name__ == "__main__":
 		print time.strftime('%Y-%m-%d %H:%M:%S')
 		print("Running step 3 -> Loading")
 
+ 
+		if ophLog == True:
+			import logging
+			import inspect
+			import datetime
+
+			end_time = timeit.default_timer() - start_time
+			logging.debug('[%s] [%s - %s] COMPSs execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
+
 		#Import into Ophidia
 		cubePid = etl.loadOphidia(outFileRef, times, singleNcores, user, password, hostname, port, procType, distribution, ophLog)	
 		print("Ophidia data cube ID: " + str(cubePid))
+		if distribution in "distributed":
+			os.remove(outName + ".tar.gz")
 
 		print time.strftime('%Y-%m-%d %H:%M:%S')
 		print("End of ETL process")
@@ -289,3 +305,6 @@ if __name__ == "__main__":
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 	print("*************************************************\n")
+	if ophLog == True:
+		end_time = timeit.default_timer() - start_time
+		logging.debug('[%s] [%s - %s] TOTAL execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
