@@ -45,14 +45,6 @@ if __name__ == "__main__":
 	password = args.password
 	token = args.token
 
-	if token is None and (user is None or password is None):
-		print("Credentials (user-password or token) for Ophidia instance are not specified")
-		exit(1)
-
-	if token is not None:
-		user = "__TOKEN__"
-		password = token
-
 	if confFile == "config.ini":
 		configFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.ini")
 	else:
@@ -94,6 +86,23 @@ if __name__ == "__main__":
 		port = config.get('ophidia', 'port')
 	else:
 		port = '11732'
+
+	if token is None and (user is None or password is None):
+		if config.has_option('ophidia', 'token'):
+			token = config.get('ophidia', 'token')
+		else:
+			if config.has_option('ophidia', 'user'):
+				user = config.get('ophidia', 'user')
+			if config.has_option('ophidia', 'pass'):
+				password = config.get('ophidia', 'pass')
+
+	if token is None and (user is None or password is None):
+		print("Credentials (user-password or token) for Ophidia instance are not specified")
+		exit(1)
+
+	if token is not None:
+		user = "__TOKEN__"
+		password = token
 
 	if config.has_option('privacy', 'policyFile1'):
 		policyFile1 = config.get('privacy', 'policyFile1')
