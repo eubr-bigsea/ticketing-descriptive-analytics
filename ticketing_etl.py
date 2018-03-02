@@ -190,11 +190,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			if mode == 'compss':
 				if dq1 is not None and dq2 is not None and dq3 is not None:
 					from compss_functions import compssTransformDQ
-					res = compssTransformDQ(sub_x[i], sub_y[i], sub_times[i], sub_dq1[i], sub_dq2[i], sub_dq3[i], x, y, time_val)
-					results[i] = res[0]
-					results_dq1[i] = res[1]
-					results_dq2[i] = res[2]
-					results_dq3[i] = res[3]
+					results[i] = compssTransformDQ(sub_x[i], sub_y[i], sub_times[i], sub_dq1[i], sub_dq2[i], sub_dq3[i], x, y, time_val)
 				else:
 					from compss_functions import compssTransform
 					results[i] = compssTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
@@ -213,6 +209,13 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		if mode == 'compss':
 			from pycompss.api.api import compss_wait_on
 			results = compss_wait_on(results)
+			if dq1 is not None and dq2 is not None and dq3 is not None:
+				res = results[:]
+				for i in range(len(res)):
+					results[i] = res[i][0]
+					results_dq1[i] = res[i][1]
+					results_dq2[i] = res[i][2]
+					results_dq3[i] = res[i][3]
 
 		resultList = []
 		for r in results:
@@ -368,11 +371,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			if mode == 'compss':
 				if dq1 is not None and dq2 is not None and dq3 is not None:
 					from compss_functions import compssTransformDQ
-					res = compssTransformDQ(sub_x[i], sub_y[i], sub_times[i], sub_dq1[i], sub_dq2[i], sub_dq3[i], x, y, time_val)
-					results[i] = res[0]
-					results_dq1[i] = res[1]
-					results_dq2[i] = res[2]
-					results_dq3[i] = res[3]
+					results[i] = compssTransformDQ(sub_x[i], sub_y[i], sub_times[i], sub_dq1[i], sub_dq2[i], sub_dq3[i], x, y, time_val)
 				else:
 					from compss_functions import compssTransform
 					results[i] = compssTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
@@ -391,6 +390,13 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		if mode == 'compss':
 			from pycompss.api.api import compss_wait_on
 			results = compss_wait_on(results)
+			if dq1 is not None and dq2 is not None and dq3 is not None:
+				res = results[:]
+				for i in range(len(res)):
+					results[i] = res[i][0]
+					results_dq1[i] = res[i][1]
+					results_dq2[i] = res[i][2]
+					results_dq3[i] = res[i][3]
 
 		resultList = []
 		for r in results:
