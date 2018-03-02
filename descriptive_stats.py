@@ -396,7 +396,7 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 		logging.debug('[%s] [%s - %s] MERGE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 		start_time = timeit.default_timer()
 	aggregatedCube = mergedCube.aggregate(group_size='all',operation='sum',ncores=1)
-	if logFile == True:
+	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
 		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
@@ -459,7 +459,7 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 	return outFile
 
 
-def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, cubePid, processing, format, outputFolder, procType, mode, logFlag):
+def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid, dq_filters, logFlag):
 
 	if procType == "busUsage":
 		measure = "passengers"
@@ -467,6 +467,9 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 		measure = "usage"
 	else:
 		raise RuntimeError("Type of processing not recognized")
+
+	if len(cubePid) < 1:
+		raise RuntimeError("Input data cube is missing")
 
 	if logFlag == True:
 		frame = inspect.getframeinfo(inspect.currentframe())
@@ -487,7 +490,7 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 		exit("ERROR: Historical datacube not found")
 	else:
 		for c in data['response'][0]['objcontent'][0]['rowvalues']:
-			if c[0] == cubePid:
+			if c[0] == cubePid[0]:
 				historicalCubePid = c[0]
 				break
 
@@ -513,6 +516,23 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 		endDate = data['response'][1]['objcontent'][0]['rowvalues'][0][4]
 		endDate = datetime.datetime.strptime(endDate, "%Y-%m-%d")
 
+	if len(cubePid) == 4:
+		#Apply data quality filters
+		if logFlag == True:
+			frame = inspect.getframeinfo(inspect.currentframe())
+			start_time = timeit.default_timer()
+		for i in range(len(cubePid[1:])):
+			#Check data quality filters
+			if dq_filters[i] is not None:
+				#Apply filer
+				dqcube = cube.Cube(pid=cubePid[1+i])
+				dqcube = dqcube.apply(query="oph_predicate('oph_float','oph_float',measure,'x-"+str(dq_filters[i])+"','>=0','1','NaN')", ncores=singleNcores)
+				historicalCube = historicalCube.intercube(cube2=dqcube.pid, operation='mask', ncores=singleNcores)
+
+		if logFlag == True:
+			end_time = timeit.default_timer() - start_time
+			logging.debug('[%s] [%s - %s] APPLY DQ filters execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
+
 	if logFlag == True:
 		frame = inspect.getframeinfo(inspect.currentframe())
 		start_time = timeit.default_timer()
@@ -521,6 +541,23 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 		end_time = timeit.default_timer() - start_time
 		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
+	return (aggregatedCube, endDate, startDate)
+
+
+def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, processing, format, outputFolder, procType, mode, logFlag):
+
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time_begin = timeit.default_timer()
+
+	#Initialize
+	sys.stdout = open(os.devnull, 'w')
+	if user is "__TOKEN__":
+		cube.Cube.setclient(token=password, server=hostname, port=port)
+	else:
+		cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
+	sys.stdout = sys.__stdout__; 
+		
 	#Subset on weekdays (monday is 0)
 	numDays = (endDate - startDate).days + 1
 	startDay = startDate.isoweekday()

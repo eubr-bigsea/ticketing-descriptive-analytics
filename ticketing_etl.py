@@ -7,7 +7,7 @@ from PyOphidia import cube, client
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import common_functions as common
 
-def extractPhase(inputFiles, tmpFolder, procType, mode):
+def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode):
 
 	#Loop on input files
 	data = [0 for m in range(0, len(inputFiles))]
@@ -22,22 +22,40 @@ def extractPhase(inputFiles, tmpFolder, procType, mode):
 
 	outputData = []
 	if procType == "busUsage":
-		data.sort_values(['CODLINHA', 'NOMELINHA', 'CODVEICULO', 'DATAUTILIZACAO'], ascending=[True, True, True, True], inplace=True)
+		data.sort_values(['CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO'], ascending=[True, True, True], inplace=True)
 
 		line = data['CODLINHA'].values.flatten('F')
 		vehicle = data['CODVEICULO'].values.flatten('F')
 		time = data['DATAUTILIZACAO'].values.flatten('F')
-		outputData = [line, vehicle, time]
+
+		completeness = None
+		consistency = None
+		timeliness = None
+		if dq_flag == True and 'COMPLETENESS_MISSING' in data and "TIMELINESS_DATAUTILIZACAO" in data and "ASSOCIATION_CONSISTENCY" in data:
+			completeness = data['COMPLETENESS_MISSING'].values.flatten('F')
+			consistency = data['ASSOCIATION_CONSISTENCY'].values.flatten('F')
+			timeliness = data['TIMELINESS_DATAUTILIZACAO'].values.flatten('F')
+
+		outputData = [line, vehicle, time, completeness, consistency, timeliness]
 
 	elif procType == "passengerUsage":
-		data.sort_values(['NUMEROCARTAO', 'CODLINHA', 'NOMELINHA', 'CODVEICULO', 'DATAUTILIZACAO'], ascending=[True, True, True, True, True], inplace=True)
+		data.sort_values(['NUMEROCARTAO', 'CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO'], ascending=[True, True, True, True], inplace=True)
 
 		line = data['CODLINHA'].values.flatten('F')
 		time = data['DATAUTILIZACAO'].values.flatten('F')
 		number = data['NUMEROCARTAO'].values.flatten('F')
 		birthDate = data['DATANASCIMENTO'].values.flatten('F')
 		gender = data['SEXO'].values.flatten('F')
-		outputData = [number, line, time, birthDate, gender]
+
+		completeness = None
+		consistency = None
+		timeliness = None
+		if dq_flag == True and 'COMPLETENESS_MISSING' in data and "TIMELINESS_DATAUTILIZACAO" in data and "ASSOCIATION_CONSISTENCY" in data:
+			completeness = data['COMPLETENESS_MISSING'].values.flatten('F')
+			consistency = data['ASSOCIATION_CONSISTENCY'].values.flatten('F')
+			timeliness = data['TIMELINESS_DATAUTILIZACAO'].values.flatten('F')
+
+		outputData = [number, line, time, birthDate, gender, completeness, consistency, timeliness]
 
 	else:
 		raise RuntimeError("Type of processing not recognized")
@@ -60,6 +78,9 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		x = data[0]
 		y = data[1]
 		t = data[2]
+		dq1 = data[3]
+		dq2 = data[4]
+		dq3 = data[5]
 
 		diff_y = [y[i] != y[i+1] for i in range(0,len(y)-1)]
 		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
@@ -70,6 +91,10 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		#Split time array based on external dimensions
 		records_split = numpy.where(diff)[0]+1
 		sub_times = numpy.split(t, records_split)
+		if dq1 is not None and dq2 is not None and dq3 is not None:
+			sub_dq1 = numpy.split(dq1, records_split)
+			sub_dq2 = numpy.split(dq2, records_split)
+			sub_dq3 = numpy.split(dq3, records_split)
 		#Add index for first element
 		records_split = numpy.insert(records_split,0,0)
 		sub_x = numpy.take(x, records_split)
@@ -130,12 +155,20 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			sub_times = numpy.array_split(sub_times, splits)
 			sub_x = numpy.array_split(sub_x, splits)
 			sub_y = numpy.array_split(sub_y, splits)
+			if dq1 is not None and dq2 is not None and dq3 is not None:
+				sub_dq1 = numpy.array_split(sub_dq1, splits)
+				sub_dq2 = numpy.array_split(sub_dq2, splits)
+				sub_dq3 = numpy.array_split(sub_dq3, splits)
 
 			threadNum = len(splits) if len(splits) < multiProcesses else multiProcesses
 		else:
 			sub_times = [sub_times]
 			sub_x = [sub_x]
 			sub_y = [sub_y]
+			if dq1 is not None and dq2 is not None and dq3 is not None:
+				sub_dq1 = [sub_dq1]
+				sub_dq2 = [sub_dq2]
+				sub_dq3 = [sub_dq3]
 			threadNum = 1
 
 		#Define time dimension (aggregate on time period)
@@ -148,13 +181,34 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		time_val = [start_time + i*time_period for i in range(0,time_len+1)]
 
 		results = [0 for i in range(0, int(threadNum))]
+		if dq1 is not None and dq2 is not None and dq3 is not None:
+			results_dq1 = [0 for i in range(0, int(threadNum))]
+			results_dq2 = [0 for i in range(0, int(threadNum))]
+			results_dq3 = [0 for i in range(0, int(threadNum))]
+
 		for i in range(0, int(threadNum)):
 			if mode == 'compss':
-				from compss_functions import compssTransform
-				results[i] = compssTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
+				if dq1 is not None and dq2 is not None and dq3 is not None:
+					from compss_functions import compssTransformDQ
+					res = compssTransformDQ(sub_x[i], sub_y[i], sub_times[i], sub_dq1[i], sub_dq2[i], sub_dq3[i], x, y, time_val)
+					results[i] = res[0]
+					results_dq1[i] = res[1]
+					results_dq2[i] = res[2]
+					results_dq3[i] = res[3]
+				else:
+					from compss_functions import compssTransform
+					results[i] = compssTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
 			else:
-				from internal_functions import internalTransform
-				results[i] = internalTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
+				if dq1 is not None and dq2 is not None and dq3 is not None:
+					from internal_functions import internalTransformDQ
+					res = internalTransformDQ(sub_x[i], sub_y[i], sub_times[i], sub_dq1[i], sub_dq2[i], sub_dq3[i], x, y, time_val)
+					results[i] = res[0]
+					results_dq1[i] = res[1]
+					results_dq2[i] = res[2]
+					results_dq3[i] = res[3]
+				else:
+					from internal_functions import internalTransform
+					results[i] = internalTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
 
 		if mode == 'compss':
 			from pycompss.api.api import compss_wait_on
@@ -166,12 +220,34 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			
 		measure = numpy.concatenate(resultList, axis=0)
 
+		if dq1 is not None and dq2 is not None and dq3 is not None:
+			resultList = []
+			for r in results_dq1:
+				resultList.append(r)		
+			measure_dq1 = numpy.concatenate(resultList, axis=0)
+			resultList = []
+			for r in results_dq2:
+				resultList.append(r)		
+			measure_dq2 = numpy.concatenate(resultList, axis=0)
+			resultList = []
+			for r in results_dq3:
+				resultList.append(r)		
+			measure_dq3 = numpy.concatenate(resultList, axis=0)
+
 		#Create NetCDF file
 		start_time = datetime.datetime.strptime(datetime.datetime.utcfromtimestamp(time_val[0]).strftime('%Y-%m-%d %H:%M:%S'), "%Y-%m-%d %H:%M:%S")
 		times = [start_time + datetime.timedelta(hours=0.5) + n *datetime.timedelta(hours=1) for n in range(time_len)]
-		outputFile = os.path.join(outputFolder, "traffic_" + str(time.time()) + ".nc")
-		common.createNetCDFFileBusUsage(outputFile, x, y, times, measure)
+		outputFile = []
+		outputFile.append(os.path.join(outputFolder, "traffic_" + str(time.time()) + ".nc"))
+		common.createNetCDFFileBusUsage(outputFile[0], x, y, times, measure,'passengers')
 
+		if dq1 is not None and dq2 is not None and dq3 is not None:
+			outputFile.append(os.path.join(outputFolder, "traffic_dq1_" + str(time.time()) + ".nc"))
+			common.createNetCDFFileBusUsage(outputFile[1], x, y, times, measure_dq1,'passengers_completeness')
+			outputFile.append(os.path.join(outputFolder, "traffic_dq2_" + str(time.time()) + ".nc"))
+			common.createNetCDFFileBusUsage(outputFile[2], x, y, times, measure_dq2,'passengers_consistency')
+			outputFile.append(os.path.join(outputFolder, "traffic_dq3_" + str(time.time()) + ".nc"))
+			common.createNetCDFFileBusUsage(outputFile[3], x, y, times, measure_dq3,'passengers_timeliness')
 
 	elif procType == "passengerUsage":
 		time_period = 86400
@@ -180,6 +256,9 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		t = data[2]
 		w = data[3]
 		z = data[4]
+		dq1 = data[3]
+		dq2 = data[4]
+		dq3 = data[5]
 
 		diff_y = [y[i] != y[i+1] for i in range(0,len(y)-1)]
 		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
@@ -190,6 +269,10 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		#Split time array based on external dimensions
 		records_split = numpy.where(diff)[0]+1
 		sub_times = numpy.split(t, records_split)
+		if dq1 is not None and dq2 is not None and dq3 is not None:
+			sub_dq1 = numpy.split(dq1, records_split)
+			sub_dq2 = numpy.split(dq2, records_split)
+			sub_dq3 = numpy.split(dq3, records_split)
 		#Add index for first element
 		records_split = numpy.insert(records_split,0,0)
 		sub_x = numpy.take(x, records_split)
@@ -250,11 +333,20 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			sub_times = numpy.array_split(sub_times, splits)
 			sub_x = numpy.array_split(sub_x, splits)
 			sub_y = numpy.array_split(sub_y, splits)
+			if dq1 is not None and dq2 is not None and dq3 is not None:
+				sub_dq1 = numpy.array_split(sub_dq1, splits)
+				sub_dq2 = numpy.array_split(sub_dq2, splits)
+				sub_dq3 = numpy.array_split(sub_dq3, splits)
+
 			threadNum = len(splits) if len(splits) < multiProcesses else multiProcesses
 		else:
 			sub_times = [sub_times]
 			sub_x = [sub_x]
 			sub_y = [sub_y]
+			if dq1 is not None and dq2 is not None and dq3 is not None:
+				sub_dq1 = [sub_dq1]
+				sub_dq2 = [sub_dq2]
+				sub_dq3 = [sub_dq3]
 			threadNum = 1
 
 		#Define time dimension (aggregate on time period)
@@ -267,13 +359,34 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		time_val = [start_time + i*time_period for i in range(0,time_len+1)]
 
 		results = [0 for i in range(0, int(threadNum))]
+		if dq1 is not None and dq2 is not None and dq3 is not None:
+			results_dq1 = [0 for i in range(0, int(threadNum))]
+			results_dq2 = [0 for i in range(0, int(threadNum))]
+			results_dq3 = [0 for i in range(0, int(threadNum))]
+
 		for i in range(0, int(threadNum)):
 			if mode == 'compss':
-				from compss_functions import compssTransform
-				results[i] = compssTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
+				if dq1 is not None and dq2 is not None and dq3 is not None:
+					from compss_functions import compssTransformDQ
+					res = compssTransformDQ(sub_x[i], sub_y[i], sub_times[i], sub_dq1[i], sub_dq2[i], sub_dq3[i], x, y, time_val)
+					results[i] = res[0]
+					results_dq1[i] = res[1]
+					results_dq2[i] = res[2]
+					results_dq3[i] = res[3]
+				else:
+					from compss_functions import compssTransform
+					results[i] = compssTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
 			else:
-				from internal_functions import internalTransform
-				results[i] = internalTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
+				if dq1 is not None and dq2 is not None and dq3 is not None:
+					from internal_functions import internalTransformDQ
+					res = internalTransformDQ(sub_x[i], sub_y[i], sub_times[i], sub_dq1[i], sub_dq2[i], sub_dq3[i], x, y, time_val)
+					results[i] = res[0]
+					results_dq1[i] = res[1]
+					results_dq2[i] = res[2]
+					results_dq3[i] = res[3]
+				else:
+					from internal_functions import internalTransform
+					results[i] = internalTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
 
 		if mode == 'compss':
 			from pycompss.api.api import compss_wait_on
@@ -284,6 +397,20 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			resultList.append(r)
 			
 		measure = numpy.concatenate(resultList, axis=0)
+
+		if dq1 is not None and dq2 is not None and dq3 is not None:
+			resultList = []
+			for r in results_dq1:
+				resultList.append(r)		
+			measure_dq1 = numpy.concatenate(resultList, axis=0)
+			resultList = []
+			for r in results_dq2:
+				resultList.append(r)		
+			measure_dq2 = numpy.concatenate(resultList, axis=0)
+			resultList = []
+			for r in results_dq3:
+				resultList.append(r)		
+			measure_dq3 = numpy.concatenate(resultList, axis=0)
 
 		#Match extra attributes with unique users
 		#x = [p for p,v in enumerate(x)]
@@ -304,9 +431,18 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		#Create NetCDF file
 		start_time = datetime.datetime.strptime(datetime.datetime.utcfromtimestamp(time_val[0]).strftime('%Y-%m-%d %H:%M:%S'), "%Y-%m-%d %H:%M:%S")
 		times = [start_time + datetime.timedelta(days=0.5) + n *datetime.timedelta(days=1) for n in range(time_len)]
-		outputFile = os.path.join(outputFolder, "traffic_" + str(time.time()) + ".nc")
+		outputFile = []
+		outputFile.append(os.path.join(outputFolder, "traffic_" + str(time.time()) + ".nc"))
+		common.createNetCDFFilePassengerUsage(outputFile[0], x, y, times, measure,'usage')
 
-		common.createNetCDFFilePassengerUsage(outputFile, x, y, times, measure)
+		if dq1 is not None and dq2 is not None and dq3 is not None:
+			outputFile.append(os.path.join(outputFolder, "traffic_dq1_" + str(time.time()) + ".nc"))
+			common.createNetCDFFilePassengerUsage(outputFile[1], x, y, times, measure_dq1,'usage_completeness')
+			outputFile.append(os.path.join(outputFolder, "traffic_dq2_" + str(time.time()) + ".nc"))
+			common.createNetCDFFilePassengerUsage(outputFile[2], x, y, times, measure_dq2,'usage_consistency')
+			outputFile.append(os.path.join(outputFolder, "traffic_dq3_" + str(time.time()) + ".nc"))
+			common.createNetCDFFilePassengerUsage(outputFile[3], x, y, times, measure_dq3,'usage_timeliness')
+
 	else:
 		raise RuntimeError("Type of processing not recognized")
 
@@ -316,6 +452,7 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 
 	if procType == "busUsage":
 		measure = "passengers"
+		dq_measures = ["passengers_completeness", "passengers_consistency", "passengers_timeliness"]
 		imp_concept_level = "h"
 	elif procType == "passengerUsage":
 		measure = "usage"
@@ -330,7 +467,6 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 	else:
 		cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
 
-
 	if logFlag == True:
 		import timeit
 		import logging
@@ -338,16 +474,35 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 		frame = inspect.getframeinfo(inspect.currentframe())
 		start_time = timeit.default_timer()
 
-	if distribution in "distributed":
-		cube.Cube.script(script='bigsea_retrieve',args=fileRef+'|token',display=False)
+	if len(fileRef) != 1 and len(fileRef) != 4:
+		raise RuntimeError("Number of input files is not correct")
+
+	if distribution in "distributed":	
+		cube.Cube.script(script='bigsea_retrieve',args=fileRef[0]+'|token',display=False)
 		data = json.loads(cube.Cube.client.last_response)
 		inputFile = data['response'][0]['objcontent'][0]["message"].splitlines()[0]
 	else:
-		inputFile = fileRef
+		inputFile = fileRef[0]
+	
+	dq_files = []
+	if len(fileRef) == 4:
+		for f in fileRef[1:]:
+			if distribution in "distributed":	
+				cube.Cube.script(script='bigsea_retrieve',args=f+'|token',display=False)
+				data = json.loads(cube.Cube.client.last_response)
+				inputF = data['response'][0]['objcontent'][0]["message"].splitlines()[0]
+			else:
+				inputF = f
+
+			dq_files.append(inputF)
 
 	#Check instance base_src_path
 	if cube.Cube.client.base_src_path != "/" and inputFile.startswith(cube.Cube.client.base_src_path):
 		inputFile = inputFile[len(cube.Cube.client.base_src_path):]
+
+		if len(dq_files) > 0:
+			for i in range(len(dq_files)): 
+				dq_files[i] = dq_files[i][len(cube.Cube.client.base_src_path):]			
 
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
@@ -362,10 +517,22 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 		frame = inspect.getframeinfo(inspect.currentframe())
 		start_time = timeit.default_timer()
 
+	pid = []
 	if procType == "busUsage":
 		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+		pid.append(historicalCube.pid)
+		if len(dq_files) > 0:
+			for i in range(len(dq_files)): 
+				historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+				pid.append(historicalCube_dq.pid)
+
 	elif procType == "passengerUsage":
 		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+		pid.append(historicalCube.pid)
+		if len(dq_files) > 0:
+			for i in range(len(dq_files)): 
+				historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+				pid.append(historicalCube_dq.pid)
 
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
@@ -377,5 +544,5 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 
 	sys.stdout = sys.__stdout__; 
 
-	return historicalCube.pid
+	return pid
 

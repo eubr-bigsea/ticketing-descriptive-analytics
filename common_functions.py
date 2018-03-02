@@ -65,6 +65,39 @@ def aggregateData(args):
 
 	return measure
 
+def aggregateDataDQ(args):
+	ar = args[0]
+	time_val = args[1]
+
+	#DQ metrics
+	dq1 = args[2]
+	dq2 = args[3]
+	dq3 = args[4]
+
+	measure = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
+	measure_dq1 = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
+	measure_dq2 = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
+	measure_dq3 = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
+	time = [calendar.timegm(k.timetuple()) for k in ar]
+	for time_index in range(0,len(time_val)-1):
+		for idx, t in enumerate(time):
+			if t >= time_val[time_index] and t < time_val[time_index+1]: 
+				if not numpy.isnan(measure[time_index]):
+					measure[time_index] += 1
+					measure_dq1[time_index] += dq1[idx]
+					measure_dq2[time_index] += dq2[idx]
+					measure_dq3[time_index] = numpy.min([dq3[idx], measure_dq3[time_index]])
+				else:
+					measure[time_index] = 1
+					measure_dq1[time_index] = dq1[idx]
+					measure_dq2[time_index] = dq2[idx]
+					measure_dq3[time_index] = dq3[idx]
+
+	measure_dq1 = numpy.divide(measure_dq1, measure, out=numpy.full_like(measure,numpy.nan))
+	measure_dq2 = numpy.divide(measure_dq2, measure, out=numpy.full_like(measure,numpy.nan))
+
+	return [measure, measure_dq1, measure_dq2, measure_dq3]
+
 def createJSONFileBusUsage(outputFolder, fileName, passengerData, codLinhaData, dateData, mode, keepNan):
 
 	jsonFile = os.path.join(outputFolder, fileName+'.json')
@@ -215,7 +248,7 @@ def buildSubsetFilter(startDate, numDays, day):
 		return filterList[:-1]
 
 
-def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure):
+def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure, measure_name):
 
 	outnc = netCDF4.Dataset(filename, 'w', format='NETCDF4')
 	time_dim = outnc.createDimension('time', len(times))
@@ -225,7 +258,7 @@ def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure):
 	line_var = outnc.createVariable('cod_linha', numpy.int64, ('cod_linha',))
 	vehicle_var = outnc.createVariable('cod_veiculo', numpy.int64, ('cod_veiculo',))
 
-	measure_var = outnc.createVariable('passengers', numpy.float32, ('cod_linha','cod_veiculo','time',), fill_value='NaN')
+	measure_var = outnc.createVariable(measure_name, numpy.float32, ('cod_linha','cod_veiculo','time',), fill_value='NaN')
 
 	#Set metadata
 	time_var.units = 'hours since 2015-1-1 00:00:00' 
@@ -237,7 +270,7 @@ def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure):
 	line_var.axis = "Y" ;
 	vehicle_var.axis = "X" ;
 
-	measure_var.standard_name = "passengers"
+	measure_var.standard_name = measure_name
 	measure_var.long_name = "Passenger count"
 	measure_var.missing_value = "NaN"
 
@@ -254,7 +287,7 @@ def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure):
 
 	outnc.close()
 
-def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, measure):
+def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, measure, measure_name):
 
 	outnc = netCDF4.Dataset(filename, 'w', format='NETCDF4')
 	time_dim = outnc.createDimension('time', None) # None means unlimited
@@ -264,7 +297,7 @@ def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, me
 	line_var = outnc.createVariable('cod_linha', numpy.int64, ('cod_linha',))
 	passenger_var = outnc.createVariable('cod_passenger', numpy.int64, ('cod_passenger',))
 
-	measure_var = outnc.createVariable('usage', numpy.float32, ('time','cod_linha','cod_passenger',), fill_value='NaN')
+	measure_var = outnc.createVariable(measure_name, numpy.float32, ('time','cod_linha','cod_passenger',), fill_value='NaN')
 
 	#Set metadata
 	time_var.units = 'hours since 2015-1-1 00:00:00' 
@@ -276,7 +309,7 @@ def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, me
 	line_var.axis = "X" ;
 	passenger_var.axis = "Y" ;
 
-	measure_var.standard_name = "usage"
+	measure_var.standard_name = measure_name
 	measure_var.long_name = "Bus usage count"
 	measure_var.missing_value = "NaN"
 

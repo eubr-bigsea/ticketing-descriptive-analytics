@@ -24,6 +24,10 @@ def compssExtractFromFile(inputFolder, inputName):
 def compssTransform(sub_x, sub_y, sub_times, x, y, time_val):
 	return internal.internalTransform(sub_x, sub_y, sub_times, x, y, time_val)
 
+@task(sub_x=IN, sub_y=IN, sub_times=IN, x=IN, y=IN, time_val=IN, returns=list)
+def compssTransformDQ(sub_x, sub_y, sub_times, sub_dq1, sub_dq2, sub_dq3, x, y, time_val):
+	return internal.internalTransformDQ(sub_x, sub_y, sub_times, sub_dq1, sub_dq2, sub_dq3, x, y, time_val)
+
 #Functions for Ophidia aggregations
 @task(startCube=IN, metric=IN, parallelNcores=IN, user=IN, pwd=IN, host=IN, port=IN, returns=dict)
 def compssSimpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port):
