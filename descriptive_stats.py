@@ -527,7 +527,11 @@ def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid
 				#Apply filer
 				dqcube = cube.Cube(pid=cubePid[1+i])
 				dqcube = dqcube.apply(query="oph_predicate('oph_float','oph_float',measure,'x-"+str(dq_filters[i])+"','>=0','1','NaN')", ncores=singleNcores)
-				historicalCube = historicalCube.intercube(cube2=dqcube.pid, operation='mask', ncores=singleNcores)
+				newHistoricalCube = historicalCube.intercube(cube2=dqcube.pid, operation='mask', ncores=singleNcores)
+				dqcube.delete()
+				if i != 0:
+					historicalCube.delete()
+				historicalCube = newHistoricalCube
 
 		if logFlag == True:
 			end_time = timeit.default_timer() - start_time
@@ -585,8 +589,31 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 		logging.debug('[%s] [%s - %s] #%s# execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), processing, str(end_time))
 
 	#Remove tmp cubes
-	cube.Cube.client.submit("oph_delete cube=[container=bigsea;level=1|2|3|4|5|6]")
-	#cube.Cube.deletecontainer(container=str(sample_container), delete_type='physical', hidden='no')
+	#cube.Cube.client.submit("oph_delete cube=[container=bigsea;level!=0;cube_filter!="+str(aggregatedCube.pid.split("/")[-1])+"]")
 
 	return outFile
+
+def removeTempCubes(singleNcores, user, password, hostname, port, logFlag):
+
+	if logFlag == True:
+		frame = inspect.getframeinfo(inspect.currentframe())
+		start_time_begin = timeit.default_timer()
+
+	#Initialize
+	sys.stdout = open(os.devnull, 'w')
+	if user is "__TOKEN__":
+		cube.Cube.setclient(token=password, server=hostname, port=port)
+	else:
+		cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
+	sys.stdout = sys.__stdout__;
+
+	#Remove tmp cubes
+	cube.Cube.client.submit("oph_delete cube=[container=bigsea;level=1|2|3|4|5|6|7|8|9|10|11|12]")
+	#cube.Cube.deletecontainer(container=str(sample_container), delete_type='physical', hidden='no')
+
+	if logFlag == True:
+		end_time = timeit.default_timer() - start_time_begin
+		logging.debug('[%s] [%s - %s] Delete execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
+
+	return True
 

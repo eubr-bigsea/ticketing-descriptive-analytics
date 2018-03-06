@@ -70,6 +70,8 @@ if __name__ == "__main__":
 				else:
 					print("Data Quality filters values are not setup correctly")
 					exit(1)
+			if not any(dq_filters):
+				dq_flag = False
 
 	#Match datacube PIDs
 	input_cubes = args.input_cube
@@ -307,6 +309,7 @@ if __name__ == "__main__":
 			anonymFile = privacy.anonymize3File(anonymizationBin3, outFile, outputFolder, outputFolder, policyFile3, mode)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
+		dstat.removeTempCubes(singleNcores, user, password, hostname, port, ophLog)
 	elif procType == "busUsage":
 		if stats == "all" or stats == "weekdaysets-peakhours":
 			print("Computing: number of passenger stats for each hour of group of weekdays")
@@ -357,6 +360,8 @@ if __name__ == "__main__":
 			print("Computing: number of passenger stats for each bus line and hour in the time range")
 			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "hourly-lines", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
+
+		dstat.removeTempCubes(singleNcores, user, password, hostname, port, ophLog)
 
 	print("*************************************************\n")
 	if ophLog == True:
