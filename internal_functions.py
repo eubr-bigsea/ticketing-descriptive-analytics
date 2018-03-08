@@ -67,7 +67,6 @@ def internalExtractFromFile(inputFolder, inputName):
 	return None
 
 def internalTransform(sub_x, sub_y, sub_times, x, y, time_val):
-
 	#We assume the function will work on a subset of continuos rows
 	from bisect import bisect_left
 	first_x_index = (bisect_left(x, sub_x[0]))
