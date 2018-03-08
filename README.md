@@ -19,7 +19,7 @@ To run the application:
 
 2. launch the application, as in the following:
 ```
-runcompss -m --pythonpath=$PWD  $PWD/ticketing_analytics.py bus-usage -s all -c $PWD/config.ini
+runcompss -m --pythonpath=$PWD  $PWD/ticketing_analytics.py bus-usage -c $PWD/config.ini -s all
 ``` 
 
 To get the full list of options available use -h or --help command line option.
