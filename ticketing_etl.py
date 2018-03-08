@@ -325,7 +325,10 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 
 	sys.stdout = open(os.devnull, 'w')
 
-	cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
+	if user is "__TOKEN__":
+		cube.Cube.setclient(token=password, server=hostname, port=port)
+	else:
+		cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
 
 
 	if logFlag == True:
@@ -341,6 +344,10 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 		inputFile = data['response'][0]['objcontent'][0]["message"].splitlines()[0]
 	else:
 		inputFile = fileRef
+
+	#Check instance base_src_path
+	if cube.Cube.client.base_src_path != "/" and inputFile.startswith(cube.Cube.client.base_src_path):
+		inputFile = inputFile[len(cube.Cube.client.base_src_path):]
 
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time

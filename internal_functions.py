@@ -67,7 +67,6 @@ def internalExtractFromFile(inputFolder, inputName):
 	return None
 
 def internalTransform(sub_x, sub_y, sub_times, x, y, time_val):
-
 	#We assume the function will work on a subset of continuos rows
 	from bisect import bisect_left
 	first_x_index = (bisect_left(x, sub_x[0]))
@@ -86,7 +85,10 @@ def internalTransform(sub_x, sub_y, sub_times, x, y, time_val):
 
 #Functions for Ophidia aggregations
 def internalSimpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port, logFlag=False):
-	cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
+	if user in "__TOKEN__":
+		cube.Cube.setclient(token=pwd, server=host, port=port)
+	else:
+		cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
 	if logFlag == True:
 		frame = inspect.getframeinfo(inspect.currentframe())
 		start_time = timeit.default_timer()
@@ -102,7 +104,10 @@ def internalSimpleAggregation(startCube, metric, parallelNcores, user, pwd, host
 	return data
 
 def internalReducedAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, logFlag=False):
-	cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
+	if user in "__TOKEN__":
+		cube.Cube.setclient(token=pwd, server=host, port=port)
+	else:
+		cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
 	if logFlag == True:
 		frame = inspect.getframeinfo(inspect.currentframe())
 		start_time = timeit.default_timer()
@@ -118,7 +123,10 @@ def internalReducedAggregation(startCube, metric, spatialReduction, parallelNcor
 	return data
 
 def internalVerticalAggregation(startCube, metric, spatialReduction, parallelNcores, user, pwd, host, port, logFlag=False):
-	cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
+	if user in "__TOKEN__":
+		cube.Cube.setclient(token=pwd, server=host, port=port)
+	else:
+		cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
 	if logFlag == True:
 		frame = inspect.getframeinfo(inspect.currentframe())
 		start_time = timeit.default_timer()
@@ -138,7 +146,10 @@ def internalVerticalAggregation(startCube, metric, spatialReduction, parallelNco
 	return data
 
 def internalTotalAggregation(startCube, metric, parallelNcores, user, pwd, host, port, logFlag=False):
-	cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
+	if user in "__TOKEN__":
+		cube.Cube.setclient(token=pwd, server=host, port=port)
+	else:
+		cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
 	if logFlag == True:
 		frame = inspect.getframeinfo(inspect.currentframe())
 		start_time = timeit.default_timer()
@@ -154,10 +165,14 @@ def internalTotalAggregation(startCube, metric, parallelNcores, user, pwd, host,
 	return data
 
 def internalTotalHourlyAggregation(startCube, metric, parallelNcores, user, pwd, host, port, logFlag=False):
-	cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
+	if user in "__TOKEN__":
+		cube.Cube.setclient(token=pwd, server=host, port=port)
+	else:
+		cube.Cube.setclient(username=user, password=pwd, server=host, port=port)
 	if logFlag == True:
 		frame = inspect.getframeinfo(inspect.currentframe())
 		start_time = timeit.default_timer()
+
 	reducedCube1 = startCube.apply(query="oph_concat('OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT|OPH_FLOAT','OPH_FLOAT',oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'1:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'3:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'5:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'7:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'9:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'11:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'13:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'15:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'17:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'19:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'21:24:end'),'OPH_"+metric+"'),oph_reduce('OPH_FLOAT','OPH_FLOAT',oph_get_subarray2('OPH_FLOAT','OPH_FLOAT',measure,'23:24:end'),'OPH_"+metric+"'))", check_type='no', measure_type='manual',ncores=parallelNcores)
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
