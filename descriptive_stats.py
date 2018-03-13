@@ -463,7 +463,7 @@ def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid
 
 	if procType == "busUsage":
 		measure = "passengers"
-		int_dim = "cod_vehiculo"
+		int_dim = "cod_veiculo"
 	elif procType == "passengerUsage":
 		measure = "usage"
 		int_dim = "cod_linha"
