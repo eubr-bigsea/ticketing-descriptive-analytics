@@ -542,7 +542,7 @@ def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid
 	if logFlag == True:
 		frame = inspect.getframeinfo(inspect.currentframe())
 		start_time = timeit.default_timer()
-	aggregatedCube = historicalCube.aggregate2(concept_level='a',operation='sum',dim=int_dim,ncores=singleNcores)
+	aggregatedCube = historicalCube.aggregate2(concept_level='A',operation='sum',dim=int_dim,ncores=singleNcores)
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
 		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
