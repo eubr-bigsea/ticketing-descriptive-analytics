@@ -259,9 +259,9 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		t = data[2]
 		w = data[3]
 		z = data[4]
-		dq1 = data[3]
-		dq2 = data[4]
-		dq3 = data[5]
+		dq1 = data[5]
+		dq2 = data[6]
+		dq3 = data[7]
 
 		diff_y = [y[i] != y[i+1] for i in range(0,len(y)-1)]
 		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
@@ -462,6 +462,7 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 		imp_concept_level = "h"
 	elif procType == "passengerUsage":
 		measure = "usage"
+		dq_measures = ["usage_completeness", "usage_consistency", "usage_timeliness"]
 		imp_concept_level = "d"
 	else:
 		raise RuntimeError("Type of processing not recognized")
