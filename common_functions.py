@@ -53,15 +53,19 @@ def jsonLine2json(filename):
 def aggregateData(args):
 	ar = args[0]
 	time_val = args[1]
+	if len(args) == 3:
+		values = args[2]
+	else:
+		values = None
 	measure = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
 	time = [calendar.timegm(k.timetuple()) for k in ar]
 	for time_index in range(0,len(time_val)-1):
-		for t in time:
+		for idx,t in enumerate(time):
 			if t >= time_val[time_index] and t < time_val[time_index+1]: 
 				if not numpy.isnan(measure[time_index]):
-					measure[time_index] += 1
+					measure[time_index] += values[idx] if values is not None else 1
 				else:
-					measure[time_index] = 1
+					measure[time_index] = values[idx] if values is not None else 1
 
 	return measure
 
@@ -107,6 +111,34 @@ def createJSONFileBusUsage(outputFolder, fileName, passengerData, codLinhaData, 
 			line = {}
 			if codLinhaData:
 				line['CODLINHA'] = convertNumtoASCII(int(codLinhaData[l]))
+			#Loop on time
+			for c in range(0, len(passengerData[0][l])):
+				line['DATETIME'] =  dateData[c]
+				#In case only nans do not add line to output
+				stop_cond = 0
+				#Loop on measure
+				for i, m in enumerate(passengerData):
+					if keepNan == 0 and numpy.isnan(m[l][c]):
+						stop_cond = 1
+						break
+					else:
+						line[METRICS_BUS[i]] = round(m[l][c], 3)
+
+				if stop_cond == 0:
+					json.dump(line, outfile, sort_keys=True)
+					outfile.write('\n')
+
+	return jsonFile
+
+def createJSONFileBusStops(outputFolder, fileName, passengerData, busStopsData, dateData, mode, keepNan):
+
+	jsonFile = os.path.join(outputFolder, fileName+'.json')
+	with open(jsonFile, mode) as outfile:
+		#Loop on bus lines
+		for l in range(0, len(passengerData[0])):
+			line = {}
+			if busStopsData:
+				line['BUSSTOPID'] = int(busStopsData[l])
 			#Loop on time
 			for c in range(0, len(passengerData[0][l])):
 				line['DATETIME'] =  dateData[c]
@@ -177,6 +209,44 @@ def createCSVFileBusUsage(outputFolder, fileName, passengerData, codLinhaData, d
 				row = []
 				if codLinhaData:
 					row.append(convertNumtoASCII(int(codLinhaData[l])))
+				row.append(dateData[c])
+				#In case only nans do not add line to output
+				stop_cond = 0
+				#Loop on measure
+				for i, m in enumerate(passengerData):
+					if keepNan == 0 and numpy.isnan(m[l][c]):
+						stop_cond = 1
+						break
+					else:
+						row.append(round(m[l][c], 3))
+
+				if stop_cond == 0:
+					csvWriter.writerow(row)
+
+	return csvFile
+
+def createCSVFileBusStops(outputFolder, fileName, passengerData, busStopsData, dateData, mode, keepNan):
+
+	csvFile = os.path.join(outputFolder, fileName+'.csv')
+	with open(csvFile, mode) as outfile:
+		csvWriter = csv.writer(outfile, delimiter=';',quotechar='"', quoting=csv.QUOTE_MINIMAL)
+		if mode == 'w':
+			header = []
+			if busStopsData:
+				header.append("BUSSTOPID")
+			header.append("DATETIME")
+			for i in range(len(passengerData)):
+				header.append(METRICS_BUS[i])
+
+			csvWriter.writerow(header)
+
+		#Loop on bus lines
+		for l in range(0, len(passengerData[0])):
+			#Loop on time
+			for c in range(0, len(passengerData[0][l])):
+				row = []
+				if busStopsData:
+					row.append(int(busStopsData[l]))
 				row.append(dateData[c])
 				#In case only nans do not add line to output	
 				stop_cond = 0
@@ -284,6 +354,45 @@ def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure, m
 	outnc.cmor_version = "0.96f"
 	outnc.Conventions = "CF-1.0" 
 	outnc.frequency = "hourly" 
+
+	outnc.close()
+
+def createNetCDFFileEMBus(filename, bus_stop, cod_linha, times, measure, measure_name):
+
+	outnc = netCDF4.Dataset(filename, 'w', format='NETCDF4')
+	time_dim = outnc.createDimension('time', len(times))
+	busStop_dim = outnc.createDimension('bus_stop', None) # None means unlimited
+	line_dim = outnc.createDimension('cod_linha', len(cod_linha))
+	time_var = outnc.createVariable('time', 'd', ('time',))
+	busStop_var = outnc.createVariable('bus_stop', numpy.int64, ('bus_stop',))
+	line_var = outnc.createVariable('cod_linha', numpy.int64, ('cod_linha',))
+
+	measure_var = outnc.createVariable(measure_name, numpy.float32, ('bus_stop','cod_linha','time',), fill_value='NaN')
+
+	#Set metadata
+	time_var.units = 'hours since 2015-1-1 00:00:00'
+	time_var.calendar = 'gregorian'
+	time_var.standard_name = 'time'
+	time_var.long_name = 'time'
+	time_var.axis = 'T'
+
+	busStop_var.axis = "Y" ;
+	line_var.axis = "X" ;
+
+	measure_var.standard_name = measure_name
+	measure_var.long_name = "Passenger count"
+	measure_var.missing_value = "NaN"
+
+	time_var[:] = netCDF4.date2num(times, units = time_var.units, calendar = time_var.calendar)
+	busStop_var[:] = [int(t) for t in bus_stop]
+	line_var[:] = [convertASCIItoNum(str(t)) for t in cod_linha]
+	measure_var[:] = measure
+
+	#Add metadata
+	outnc.description = "Passenger count file"
+	outnc.cmor_version = "0.96f"
+	outnc.Conventions = "CF-1.0"
+	outnc.frequency = "hourly"
 
 	outnc.close()
 

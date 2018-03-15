@@ -20,9 +20,17 @@ def compssAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, pol
 def compssExtractFromFile(inputFolder, inputName):
 	return internal.internalExtractFromFile(inputFolder, inputName)
 
+@task(inputFolder=IN, inputName=IN, returns=pandas.DataFrame)
+def compssExtractFromEMFile(inputFolder, inputName):
+	return internal.internalExtractFromEMFile(inputFolder, inputName)
+
 @task(sub_x=IN, sub_y=IN, sub_times=IN, x=IN, y=IN, time_val=IN, returns=numpy.ndarray)
 def compssTransform(sub_x, sub_y, sub_times, x, y, time_val):
 	return internal.internalTransform(sub_x, sub_y, sub_times, x, y, time_val)
+
+@task(sub_x=IN, sub_y=IN, sub_times=IN, sub_m=IN, x=IN, y=IN, time_val=IN, returns=numpy.ndarray)
+def compssEMTransform(sub_x, sub_y, sub_times, sub_m, x, y, time_val):
+	return internal.internalEMTransform(sub_x, sub_y, sub_times, sub_m, x, y, time_val)
 
 @task(sub_x=IN, sub_y=IN, sub_times=IN, x=IN, y=IN, time_val=IN, returns=numpy.ndarray)
 def compssTransformDQ(sub_x, sub_y, sub_times, sub_dq1, sub_dq2, sub_dq3, x, y, time_val):

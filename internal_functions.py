@@ -66,6 +66,27 @@ def internalExtractFromFile(inputFolder, inputName):
 
 	return None
 
+def internalExtractFromEMFile(inputFolder, inputName):
+
+	inputFile = os.path.join(inputFolder, inputName)
+	if os.path.isfile(inputFile):
+		inFilename, inFileExt = os.path.splitext(inputFile)
+		if inFileExt == '.csv':
+			print("Extract from \"" + inputName + "\"")
+			#Parse text to remove all empty lines
+			with open(inputFile, 'r') as f:
+				#Extract date from file name
+				filedate = (os.path.basename(inputFile)).split('.')[0]
+				filedate = datetime.strptime(filedate, '%Y-%m-%d').strftime('%d/%m/%y')
+				#Convert from CSV to Pandas dataframe
+				newData = pandas.read_csv(f, skip_blank_lines = True, skipinitialspace=True, header=None, names = ['route', 'tripNum', 'shapeId', 'shapeSequence', 'shapeLat', 'shapeLon', 'distanceTravelledShape', 'busCode', 'gpsPointId', 'gpsLat', 'gpsLon', 'distanceToShapePoint', 'timestamp', 'stopPointId', 'problem', 'numberTickets'], usecols = ['route', 'tripNum', 'busCode', 'timestamp', 'stopPointId', 'numberTickets'], na_values = '-')
+				newData = newData[newData.stopPointId.notnull()]
+				newData.timestamp = filedate + " " + newData.timestamp
+
+			return newData
+
+	return None
+
 def internalTransform(sub_x, sub_y, sub_times, x, y, time_val):
 	#We assume the function will work on a subset of continuos rows
 	from bisect import bisect_left
@@ -106,6 +127,22 @@ def internalTransformDQ(sub_x, sub_y, sub_times, sub_dq1, sub_dq2, sub_dq3, x, y
 		measure_dq3[(x_index-first_x_index), y_index, :] = result[3]
 
 	return [measure, measure_dq1, measure_dq2, measure_dq3]
+
+def internalEMTransform(sub_x, sub_y, sub_times, sub_m, x, y, time_val):
+	#We assume the function will work on a subset of continuos rows
+	from bisect import bisect_left
+	first_x_index = (bisect_left(x, sub_x[0]))
+	last_x_index = (bisect_left(x, sub_x[-1]))
+
+	x_len = last_x_index - first_x_index + 1
+
+	measure = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
+	for idx, ar in enumerate(sub_times):
+		x_index = (bisect_left(x, sub_x[idx]))
+		y_index = (bisect_left(y, sub_y[idx]))
+		measure[(x_index-first_x_index), y_index, :] = common.aggregateData((ar, time_val, sub_m[idx]))
+
+	return measure
 
 #Functions for Ophidia aggregations
 def internalSimpleAggregation(startCube, metric, parallelNcores, user, pwd, host, port, logFlag=False):

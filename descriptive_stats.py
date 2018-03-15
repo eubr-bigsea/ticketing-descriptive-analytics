@@ -87,17 +87,19 @@ def buildValues(aggregation, dataList, day):
 		else:
 			if(k['name'] == 'cod_linha'):
 				mainDimData = k['values']
-		if aggregation == 'weekdays-lines' or aggregation == 'weekdaysets-lines':
+			elif(k['name'] == 'bus_stop'):
+				mainDimData = k['values']
+		if aggregation == 'weekdays-lines' or aggregation == 'weekdaysets-lines' or aggregation == 'weekdays-stops' or aggregation == 'weekdaysets-stops':
 			dateData = [day]
 		else:
 			if(k['name'] == 'time'):
-				if aggregation == 'hourly-lines':
+				if aggregation == 'hourly-lines' or  aggregation == 'hourly-stops':
 					dateData = k['values']
-				elif aggregation == 'daily-lines':
+				elif aggregation == 'daily-lines' or aggregation == 'daily-stops':
 					dateData = [datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").date().strftime("%Y-%m-%d") for m in k['values'] ]
-				elif aggregation == 'weekly-lines':
+				elif aggregation == 'weekly-lines' or aggregation == 'weekly-stops':
 					dateData = [datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").date().strftime("%Y") + " W" + str(datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").date().isocalendar()[1]) for m in k['values'] ]
-				elif aggregation == 'monthly-lines':
+				elif aggregation == 'monthly-lines' or aggregation == 'monthly-stops':
 					dateData = [datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").date().strftime("%Y-%m") for m in k['values'] ]
 				elif aggregation == 'weekdays-peakhours' or aggregation == 'weekdaysets-peakhours':
 					dateData = [datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").time().strftime("%H") for m in k['values'] ]
@@ -106,7 +108,7 @@ def buildValues(aggregation, dataList, day):
 							dateData[x] = "24"
 
 					dateData = [day + " " + str(int(m)-1) + "-" + str(int(m)) for m in dateData ]
-				elif aggregation == 'weekdays-hourly-lines' or aggregation == 'weekdaysets-hourly-lines':
+				elif aggregation == 'weekdays-hourly-lines' or aggregation == 'weekdaysets-hourly-lines' or aggregation == 'weekdays-hourly-stops' or aggregation == 'weekdaysets-hourly-stops':
 					dateData = [datetime.datetime.strptime(m, "%Y-%m-%d %H:%M:%S").time().strftime("%H") for m in k['values'] ]
 					for x,d in enumerate(dateData):
 						if d == "00":
@@ -131,7 +133,7 @@ def buildValues(aggregation, dataList, day):
 
 def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggregation, outputFolder, user, pwd, host, port, mode, logFlag):
 	cubeList = [0 for m in METRICS_BUS]
-	if aggregation == 'weekly-lines':
+	if aggregation == 'weekly-lines' or aggregation == 'weekly-stops':
 		for i, m in enumerate(METRICS_BUS):
 			if logFlag == True:
 				frame = inspect.getframeinfo(inspect.currentframe())
@@ -139,9 +141,9 @@ def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggreg
 			cubeList[i] = reducedAggregation(startCube, m.lower(), 'w', parallelNcores, user, pwd, host, port, mode, logFlag)
 			if logFlag == True:
 				end_time = timeit.default_timer() - start_time
-				logging.debug('[%s] [%s - %s] BASIC LINE WEEK %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
+				logging.debug('[%s] [%s - %s] BASIC LINE/STOP WEEK %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
 
-	elif aggregation == 'monthly-lines':
+	elif aggregation == 'monthly-lines' or aggregation == 'monthly-stops':
 		for i, m in enumerate(METRICS_BUS):
 			if logFlag == True:
 				frame = inspect.getframeinfo(inspect.currentframe())
@@ -149,9 +151,9 @@ def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggreg
 			cubeList[i] = reducedAggregation(startCube, m.lower(), 'M', parallelNcores, user, pwd, host, port, mode, logFlag)
 			if logFlag == True:
 				end_time = timeit.default_timer() - start_time
-				logging.debug('[%s] [%s - %s] BASIC LINE MONTH  %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
+				logging.debug('[%s] [%s - %s] BASIC LINE/STOP MONTH  %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
 
-	elif aggregation == 'daily-lines':
+	elif aggregation == 'daily-lines' or aggregation == 'daily-stops':
 		for i, m in enumerate(METRICS_BUS):
 			if logFlag == True:
 				frame = inspect.getframeinfo(inspect.currentframe())
@@ -159,9 +161,9 @@ def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggreg
 			cubeList[i] = reducedAggregation(startCube, m.lower(), 'd', parallelNcores, user, pwd, host, port, mode, logFlag)
 			if logFlag == True:
 				end_time = timeit.default_timer() - start_time
-				logging.debug('[%s] [%s - %s] BASIC LINE DAY %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
+				logging.debug('[%s] [%s - %s] BASIC LINE/STOP DAY %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
 
-	elif aggregation == 'hourly-lines':
+	elif aggregation == 'hourly-lines' or aggregation == 'hourly-stops':
 		for i, m in enumerate(METRICS_BUS):
 			if logFlag == True:
 				frame = inspect.getframeinfo(inspect.currentframe())
@@ -169,7 +171,7 @@ def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggreg
 			cubeList[i] = simpleAggregation(startCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
 			if logFlag == True:
 				end_time = timeit.default_timer() - start_time
-				logging.debug('[%s] [%s - %s] BASIC LINE HOUR %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
+				logging.debug('[%s] [%s - %s] BASIC LINE/STOP HOUR %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -182,10 +184,16 @@ def basicLineAggregation(parallelNcores, singleNcores, startCube, format, aggreg
 	codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList, None)
 
 	#Build json file and array for plot
-	if format == 'json':
-		outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w', 0)
+	if "stops" in aggregation:
+		if format == 'json':
+			outFile = common.createJSONFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w', 0)
+		else:
+			outFile = common.createCSVFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w', 0)
 	else:
-		outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w', 0)
+		if format == 'json':
+			outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w', 0)
+		else:
+			outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w', 0)
 
 	return outFile
 
@@ -239,7 +247,7 @@ def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, a
 
 def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode, logFlag):
 	#weekdays array
-	if aggregation == 'weekdays-hourly-lines': 
+	if aggregation == 'weekdays-hourly-lines' or aggregation == 'weekdays-hourly-stops': 
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 		weekDaysId = []
 	else:
@@ -250,7 +258,7 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 	for idx, day in enumerate(weekDays):
 		#Build filter set 
 		filter_list = ""
-		if aggregation == 'weekdays-hourly-lines': 
+		if aggregation == 'weekdays-hourly-lines' or aggregation == 'weekdays-hourly-stops': 
 			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
 		else:
 			for j in weekDaysId[idx]:
@@ -280,7 +288,7 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 			cubeList[idx][i] = totalHourlyAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
 			if logFlag == True:
 				end_time = timeit.default_timer() - start_time
-				logging.debug('[%s] [%s - %s] HOURLY LINES %s %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, m, str(end_time))
+				logging.debug('[%s] [%s - %s] HOURLY LINES/STOPS %s %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -296,16 +304,22 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 		codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList[idx], day)
 
 		#Build json file and array for plot
-		if format == 'json':
-			outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+		if "stops" in aggregation:
+			if format == 'json':
+				outFile = common.createJSONFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+			else:
+				outFile = common.createCSVFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if idx == 0 else 'a', 0)
 		else:
-			outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if idx == 0 else 'a', 0)
+			if format == 'json':
+				outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+			else:
+				outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if idx == 0 else 'a', 0)
 
 	return outFile
 
 def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode, logFlag):
 	#weekdays array
-	if aggregation == 'weekdays-lines': 
+	if aggregation == 'weekdays-lines' or aggregation == 'weekdays-stops': 
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 		weekDaysId = []
 	else:
@@ -325,7 +339,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 	for idx, day in enumerate(weekDays):
 		#Build filter set 
 		filter_list = ""
-		if aggregation == 'weekdays-lines': 
+		if aggregation == 'weekdays-lines' or aggregation == 'weekdays-stops': 
 			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
 		else:
 			for j in weekDaysId[idx]:
@@ -354,7 +368,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 			cubeList[idx][i] = totalAggregation(subsettedCube, m.lower(), parallelNcores, user, pwd, host, port, mode, logFlag)
 			if logFlag == True:
 				end_time = timeit.default_timer() - start_time
-				logging.debug('[%s] [%s - %s] DAILY LINES %s %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, m, str(end_time))
+				logging.debug('[%s] [%s - %s] DAILY LINES/STOPS %s %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, m, str(end_time))
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -370,10 +384,16 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 		codLinhaData, dateData, passengerData = buildValues(aggregation, cubeList[idx], day)
 
 		#Build json file and array for plot
-		if format == 'json':
-			outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+		if "stops" in aggregation:
+			if format == 'json':
+				outFile = common.createJSONFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+			else:
+				outFile = common.createCSVFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if idx == 0 else 'a', 0)
 		else:
-			outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+			if format == 'json':
+				outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+			else:
+				outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if idx == 0 else 'a', 0)
 
 	return outFile
 
@@ -467,6 +487,9 @@ def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid
 	elif procType == "passengerUsage":
 		measure = "usage"
 		int_dim = "cod_linha"
+	elif procType == "busStops":
+		measure = "passengers"
+		int_dim = "cod_linha"
 	else:
 		raise RuntimeError("Type of processing not recognized")
 
@@ -547,6 +570,19 @@ def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid
 		end_time = timeit.default_timer() - start_time
 		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
+	if procType == "busStops":
+		#Filter occurences with value set to zero
+		if logFlag == True:
+			frame = inspect.getframeinfo(inspect.currentframe())
+			start_time = timeit.default_timer()
+		aggregatedNewCube = aggregatedCube.apply(query="oph_predicate('oph_float','oph_float',measure,'x-0.1','>0','x','NaN')", ncores=singleNcores)
+		aggregatedCube.delete()
+		aggregatedCube = aggregatedNewCube
+		if logFlag == True:
+			end_time = timeit.default_timer() - start_time
+			logging.debug('[%s] [%s - %s] APPLY ZERO FILTER execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
+
+
 	return (aggregatedCube, endDate, startDate)
 
 
@@ -568,13 +604,13 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 	numDays = (endDate - startDate).days + 1
 	startDay = startDate.isoweekday()
 
-	if processing == 'hourly-lines' or processing == 'daily-lines' or processing == 'weekly-lines' or processing == 'monthly-lines':
-		#Description: hourly/daily/weekly/monthly aggregated stats for each bus line and time range
+	if processing == 'hourly-lines' or processing == 'daily-lines' or processing == 'weekly-lines' or processing == 'monthly-lines' or processing == 'hourly-stops' or processing == 'daily-stops' or processing == 'weekly-stops' or processing == 'monthly-stops':
+		#Description: hourly/daily/weekly/monthly aggregated stats for each bus line/stop and time range
 		outFile = basicLineAggregation(parallelNcores, singleNcores, aggregatedCube, format, processing, outputFolder, user, password, hostname, port, mode, logFlag)
-	elif processing == 'weekdays-hourly-lines' or processing == 'weekdaysets-hourly-lines':
+	elif processing == 'weekdays-hourly-lines' or processing == 'weekdaysets-hourly-lines' or processing == 'weekdays-hourly-stops' or processing == 'weekdaysets-hourly-stops':
 		#Description: hourly aggregated stats for each bus line and weekday or set of weekdays
 		outFile = weekdayLinesAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port, mode, logFlag)
-	elif processing == 'weekdays-lines' or processing == 'weekdaysets-lines':
+	elif processing == 'weekdays-lines' or processing == 'weekdaysets-lines' or processing == 'weekdays-stops' or processing == 'weekdaysets-stops':
 		#Description: daily aggregated stats for each bus line and weekday or set of weekdays
 		outFile = weekdayLinesTotalAggregation(parallelNcores, singleNcores, processing, aggregatedCube, startDate, numDays, format, outputFolder, user, password, hostname, port, mode, logFlag)
 	elif processing == 'weekdays-peakhours' or processing == 'weekdaysets-peakhours':

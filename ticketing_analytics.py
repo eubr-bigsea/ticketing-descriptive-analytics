@@ -29,12 +29,17 @@ if __name__ == "__main__":
 	parserB = subparsers.add_parser('passenger-usage', description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
 	parserB.add_argument('-s','--stats', default="all", help='Type of stats available', choices=["all", "monthly-usage", "weekly-usage"])
 
+	parserC = subparsers.add_parser('bus-stops',description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
+	parserC.add_argument('-s','--stats', default="all", help='Type of stats available', choices=["all", "weekdaysets-stops", "weekdays-stops", "weekdays-hourly-stops", "weekdaysets-hourly-stops", "monthly-stops", "weekly-stops", "daily-stops", "hourly-stops"])
+
 	args = parser.parse_args()
 
 	if args.type == 'bus-usage':
 		procType = "busUsage"
 	elif args.type == 'passenger-usage':
 		procType = "passengerUsage"
+	elif args.type == 'bus-stops':
+		procType = "busStops"
 
 	stats = args.stats
 	format = args.format
@@ -48,6 +53,9 @@ if __name__ == "__main__":
 
 	#Check data quality filters
 	dq_filters = args.dq_filters
+	if args.type == 'bus-stops':
+		dq_filters = "None"
+
 	if dq_filters == "None":
 		dq_filters = [None, None, None]
 		dq_flag = False
@@ -217,22 +225,35 @@ if __name__ == "__main__":
 			import timeit
 			global_start_time = timeit.default_timer()
 
-		anonymFile = [0 for m in range(0,len(os.listdir(inputFolder)))]
-		for i, e in enumerate(sorted(os.listdir(inputFolder))):
-			if benchmark == True:
-				start_time = timeit.default_timer()
-			anonymFile[i] = privacy.anonymize1File(anonymizationBin1, e, inputFolder, tmpFolder, policyFile1, mode)
-			if benchmark == True:
-				final_time = timeit.default_timer() - start_time
-				print("Time required on file: "+ str(final_time))
+		if procType != "busStops":
+			anonymFile = [None for m in range(0,len(os.listdir(inputFolder)))]
+			for i, e in enumerate(sorted(os.listdir(inputFolder))):
+				if benchmark == True:
+					start_time = timeit.default_timer()
+				anonymFile[i] = privacy.anonymize1File(anonymizationBin1, e, inputFolder, tmpFolder, policyFile1, mode)
+				if benchmark == True:
+					final_time = timeit.default_timer() - start_time
+					print("Time required on file: "+ str(final_time))
 
-		if benchmark == True:
-			anonymFile = compss_wait_on(anonymFile)
-			global_final_time = timeit.default_timer() - global_start_time
-			print("Required time: "+ str(global_final_time))
+			if benchmark == True:
+				anonymFile = compss_wait_on(anonymFile)
+				global_final_time = timeit.default_timer() - global_start_time
+				print("Required time: "+ str(global_final_time))
 
-		#Drop empty cells in array
-		anonymFile = [v for v in anonymFile if v is not None]
+			#Drop empty cells in array
+			anonymFile = [v for v in anonymFile if v is not None]
+		else:
+			anonymFile = [None for m in range(0,len(os.listdir(inputFolder)))]
+			for i, e in enumerate(sorted(os.listdir(inputFolder))):
+				e = os.path.join(inputFolder, e)
+				if os.path.isfile(e):
+					inFilename, inFileExt = os.path.splitext(e)
+					if inFileExt == '.csv':
+						anonymFile[i] = e
+
+			#Drop empty cells in array
+			anonymFile = [v for v in anonymFile if v is not None]
+			print(anonymFile)
 
 		print time.strftime('%Y-%m-%d %H:%M:%S')
 		print("*************************************************\n")
@@ -292,6 +313,7 @@ if __name__ == "__main__":
 	print("Running statistics computation")
 
 	aggregatedCube, endDate, startDate = dstat.applyFilters(singleNcores, user, password, hostname, port, procType, cubePid, dq_filters, ophLog)
+
 	if procType == "passengerUsage":
 		if stats == "all" or stats == "weekly-usage":
 			print("Computing: passenger usage stats for each bus line and week in the time range")
@@ -359,6 +381,48 @@ if __name__ == "__main__":
 		if stats == "all" or stats == "hourly-lines":
 			print("Computing: number of passenger stats for each bus line and hour in the time range")
 			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "hourly-lines", format, outputFolder, procType, mode, ophLog)
+			print time.strftime('%Y-%m-%d %H:%M:%S')
+
+		dstat.removeTempCubes(singleNcores, user, password, hostname, port, ophLog)
+	elif procType == "busStops":
+		if stats == "all" or stats == "weekdaysets-stops":
+			print("Computing: number of passenger stats for each bus stop and group of weekdays")
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "weekdaysets-stops", format, outputFolder, procType, mode, ophLog)
+			print time.strftime('%Y-%m-%d %H:%M:%S')
+
+		if stats == "all" or stats == "weekdays-stops":
+			print("Computing: number of passenger stats for each bus stop and weekday")
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "weekdays-stops", format, outputFolder, procType, mode, ophLog)
+			print time.strftime('%Y-%m-%d %H:%M:%S')
+
+		if stats == "all" or stats == "weekdays-hourly-stops":
+			print("Computing: number of passenger stats for each bus stop and hour of weekdays")
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "weekdays-hourly-stops", format, outputFolder, procType, mode, ophLog)
+			print time.strftime('%Y-%m-%d %H:%M:%S')
+
+		if stats == "all" or stats == "weekdaysets-hourly-stops":
+			print("Computing: number of passenger stats for each bus stop and hour of group of weekdays")
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "weekdaysets-hourly-stops", format, outputFolder, procType, mode, ophLog)
+			print time.strftime('%Y-%m-%d %H:%M:%S')
+
+		if stats == "all" or stats == "monthly-stops":
+			print("Computing: number of passenger stats for each bus stop and month in the time range")
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "monthly-stops", format, outputFolder, procType, mode, ophLog)
+			print time.strftime('%Y-%m-%d %H:%M:%S')
+
+		if stats == "all" or stats == "weekly-stops":
+			print("Computing: number of passenger stats for each bus stops and week in the time range")
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "weekly-stops", format, outputFolder, procType, mode, ophLog)
+			print time.strftime('%Y-%m-%d %H:%M:%S')
+
+		if stats == "all" or stats == "daily-stops":
+			print("Computing: number of passenger stats for each bus stop and day in the time range")
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "daily-stops", format, outputFolder, procType, mode, ophLog)
+			print time.strftime('%Y-%m-%d %H:%M:%S')
+
+		if stats == "all" or stats == "hourly-stops":
+			print("Computing: number of passenger stats for each bus stop and hour in the time range")
+			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "hourly-stops", format, outputFolder, procType, mode, ophLog)
 			print time.strftime('%Y-%m-%d %H:%M:%S')
 
 		dstat.removeTempCubes(singleNcores, user, password, hostname, port, ophLog)

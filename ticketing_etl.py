@@ -12,7 +12,7 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode):
 	#Loop on input files
 	data = [0 for m in range(0, len(inputFiles))]
 	for i, e in enumerate(inputFiles):
-		data[i] = extractFromFile(tmpFolder, e, mode)
+		data[i] = extractFromFile(tmpFolder, e, procType, mode)
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -57,19 +57,36 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode):
 
 		outputData = [number, line, time, birthDate, gender, completeness, consistency, timeliness]
 
+	elif procType == "busStops":
+		data.sort_values(['stopPointId', 'route', 'timestamp'], ascending=[True, True, True], inplace=True)
+
+		busStop = data['stopPointId'].values.flatten('F')
+		line = data['route'].values.flatten('F')
+		time = data['timestamp'].values.flatten('F')
+		passengers = data['numberTickets'].values.flatten('F')
+
+		outputData = [busStop, line, time, passengers]
 	else:
 		raise RuntimeError("Type of processing not recognized")
 
 	return outputData
 
-def extractFromFile(inputFolder, inputName, mode):
-
-	if mode == 'compss':
-		from compss_functions import compssExtractFromFile
-		return compssExtractFromFile(inputFolder, inputName)
+def extractFromFile(inputFolder, inputName, procType, mode):
+	if procType != "busStops":
+		if mode == 'compss':
+			from compss_functions import compssExtractFromFile
+			return compssExtractFromFile(inputFolder, inputName)
+		else:
+			from internal_functions import internalExtractFromFile
+			return internalExtractFromFile(inputFolder, inputName)
 	else:
-		from internal_functions import internalExtractFromFile
-		return internalExtractFromFile(inputFolder, inputName)
+		#Pre-process CSV file from EMaaS
+		if mode == 'compss':
+			from compss_functions import compssExtractFromEMFile
+			return compssExtractFromEMFile(inputFolder, inputName)
+		else:
+			from internal_functions import internalExtractFromEMFile
+			return internalExtractFromEMFile(inputFolder, inputName)
 
 def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 
@@ -449,6 +466,127 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			outputFile.append(os.path.join(outputFolder, "traffic_dq3_" + str(time.time()) + ".nc"))
 			common.createNetCDFFilePassengerUsage(outputFile[3], x, y, times, measure_dq3,'usage_timeliness')
 
+	elif procType == "busStops":
+		time_period = 3600
+		x = data[0]
+		y = data[1]
+		t = data[2]
+		m = data[3]
+
+		diff_y = [y[i] != y[i+1] for i in range(0,len(y)-1)]
+		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
+		diff = numpy.logical_or(diff_x, diff_y)
+
+		t = pandas.to_datetime(t, format='%d/%m/%y %H:%M:%S')
+
+		#Split time array based on external dimensions
+		records_split = numpy.where(diff)[0]+1
+		sub_times = numpy.split(t, records_split)
+		sub_m = numpy.split(m, records_split)
+		#Add index for first element
+		records_split = numpy.insert(records_split,0,0)
+		sub_x = numpy.take(x, records_split)
+		sub_y = numpy.take(y, records_split)
+
+		x = numpy.unique(x)
+		y = numpy.unique(y)
+
+		#Define partitions for concurrent execution
+		if int(multiProcesses) > 1:
+			#Compute exact number or records per task
+			minNum = math.floor(len(t) / float(multiProcesses))
+			remainder = len(t) % minNum
+			record_task = []
+			for i in range(0,int(multiProcesses)):
+				if remainder > 0:
+					record_task.append(minNum +1)
+					remainder = remainder - 1
+				else:
+					record_task.append(minNum)
+
+			#Compute number of matrix rows per task
+			row_task = []
+			count = 0
+			for i in diff_x:
+				count = count + 1
+				if i == True:
+					row_task.append(count)
+					count = 0
+			#Append last
+			count = count + 1
+			row_task.append(count)
+
+			#Compute number of sub_times per task based on row
+			partitions = []
+			count = 0
+			for i in range(0,int(multiProcesses)):
+				while row_task:
+					count = count + row_task.pop(0)
+					if count >= record_task[i] or not row_task:
+						partitions.append(count)
+						count = 0
+						break
+
+			#Split arrays
+			count = 0
+			current = 0
+			splits = []
+			for p in partitions:
+				for i in range(current,len(sub_times)):
+					count = count + len(sub_times[i])
+					current = current + 1
+					if count == p or not sub_times:
+						splits.append(current)
+						count = 0
+						break
+
+			sub_times = numpy.array_split(sub_times, splits)
+			sub_m = numpy.array_split(sub_m, splits)
+			sub_x = numpy.array_split(sub_x, splits)
+			sub_y = numpy.array_split(sub_y, splits)
+			threadNum = len(splits) if len(splits) < multiProcesses else multiProcesses
+		else:
+			sub_times = [sub_times]
+			sub_m = [sub_m]
+			sub_x = [sub_x]
+			sub_y = [sub_y]
+			threadNum = 1
+
+		#Define time dimension (aggregate on time period)
+		start_date = min(t)
+		end_date = max(t)
+		interval = end_date.date() - start_date.date()
+		start_time = calendar.timegm(start_date.date().timetuple())
+		time_len = (interval.days + 1)*int((24*3600)/time_period)
+		#Time val contains also 24 steps for final day
+		time_val = [start_time + i*time_period for i in range(0,time_len+1)]
+
+		results = [0 for i in range(0, int(threadNum))]
+
+		for i in range(0, int(threadNum)):
+			if mode == 'compss':
+				from compss_functions import compssEMTransform
+				results[i] = compssEMTransform(sub_x[i], sub_y[i], sub_times[i], sub_m[i], x, y, time_val)
+			else:
+				from internal_functions import internalEMTransform
+				results[i] = internalEMTransform(sub_x[i], sub_y[i], sub_times[i], sub_m[i], x, y, time_val)
+
+		if mode == 'compss':
+			from pycompss.api.api import compss_wait_on
+			results = compss_wait_on(results)
+
+		resultList = []
+		for r in results:
+			resultList.append(r)
+
+		measure = numpy.concatenate(resultList, axis=0)
+
+		#Create NetCDF file
+		start_time = datetime.datetime.strptime(datetime.datetime.utcfromtimestamp(time_val[0]).strftime('%Y-%m-%d %H:%M:%S'), "%Y-%m-%d %H:%M:%S")
+		times = [start_time + datetime.timedelta(hours=0.5) + n *datetime.timedelta(hours=1) for n in range(time_len)]
+		outputFile = []
+		outputFile.append(os.path.join(outputFolder, "traffic_" + str(time.time()) + ".nc"))
+		common.createNetCDFFileEMBus(outputFile[0], x, y, times, measure,'passengers')
 	else:
 		raise RuntimeError("Type of processing not recognized")
 
@@ -464,6 +602,9 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 		measure = "usage"
 		dq_measures = ["usage_completeness", "usage_consistency", "usage_timeliness"]
 		imp_concept_level = "d"
+	elif procType == "busStops":
+		measure = "passengers"
+		imp_concept_level = "h"
 	else:
 		raise RuntimeError("Type of processing not recognized")
 
@@ -516,7 +657,7 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 		logging.debug('[%s] [%s - %s] SCRIPT execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
 	try:
-		cube.Cube.createcontainer(container='bigsea',dim='cod_passenger|cod_linha|cod_veiculo|time',dim_type='long|long|long|double',hierarchy='oph_base|oph_base|oph_base|oph_time',display=False,base_time='2015-01-01 00:00:00',calendar='gregorian',units='h')
+		cube.Cube.createcontainer(container='bigsea',dim='cod_passenger|cod_linha|cod_veiculo|bus_stop|time',dim_type='long|long|long|long|double',hierarchy='oph_base|oph_base|oph_base|oph_base|oph_time',display=False,base_time='2015-01-01 00:00:00',calendar='gregorian',units='h')
 	except:
 		pass
 
@@ -540,6 +681,10 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 			for i in range(len(dq_files)): 
 				historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 				pid.append(historicalCube_dq.pid)
+
+	elif procType == "busStops":
+		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+		pid.append(historicalCube.pid)
 
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
