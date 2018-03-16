@@ -253,7 +253,6 @@ if __name__ == "__main__":
 
 			#Drop empty cells in array
 			anonymFile = [v for v in anonymFile if v is not None]
-			print(anonymFile)
 
 		print time.strftime('%Y-%m-%d %H:%M:%S')
 		print("*************************************************\n")

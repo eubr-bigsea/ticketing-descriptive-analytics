@@ -76,11 +76,11 @@ def internalExtractFromEMFile(inputFolder, inputName):
 			#Parse text to remove all empty lines
 			with open(inputFile, 'r') as f:
 				#Extract date from file name
-				filedate = (os.path.basename(inputFile)).split('.')[0]
-				filedate = datetime.strptime(filedate, '%Y-%m-%d').strftime('%d/%m/%y')
+				filedate = (os.path.basename(inputFile)).split('-')[0]
+				filedate = datetime.strptime(filedate, '%Y_%m_%d').strftime('%d/%m/%y')
 				#Convert from CSV to Pandas dataframe
 				newData = pandas.read_csv(f, skip_blank_lines = True, skipinitialspace=True, header=None, names = ['route', 'tripNum', 'shapeId', 'shapeSequence', 'shapeLat', 'shapeLon', 'distanceTravelledShape', 'busCode', 'gpsPointId', 'gpsLat', 'gpsLon', 'distanceToShapePoint', 'timestamp', 'stopPointId', 'problem', 'numberTickets'], usecols = ['route', 'tripNum', 'busCode', 'timestamp', 'stopPointId', 'numberTickets'], na_values = '-')
-				newData = newData[newData.stopPointId.notnull()]
+				newData = newData[newData.stopPointId.notnull() & newData.timestamp.notnull() & newData.numberTickets.notnull()]
 				newData.timestamp = filedate + " " + newData.timestamp
 
 			return newData
