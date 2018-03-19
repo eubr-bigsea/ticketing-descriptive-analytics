@@ -294,6 +294,7 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 		from pycompss.api.api import compss_wait_on
 		cubeList = compss_wait_on(cubeList)
 
+	first_day = True
 	for idx, day in enumerate(weekDays):
 		if cubeList[idx][0] == 0:
 			continue
@@ -306,14 +307,16 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 		#Build json file and array for plot
 		if "stops" in aggregation:
 			if format == 'json':
-				outFile = common.createJSONFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+				outFile = common.createJSONFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if first_day == True else 'a', 0)
 			else:
-				outFile = common.createCSVFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if idx == 0 else 'a', 0)
+				outFile = common.createCSVFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if first_day == True else 'a', 0)
 		else:
 			if format == 'json':
-				outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+				outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if first_day == True else 'a', 0)
 			else:
-				outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if idx == 0 else 'a', 0)
+				outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if first_day == True else 'a', 0)
+
+		first_day = False	
 
 	return outFile
 
@@ -374,6 +377,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 		from pycompss.api.api import compss_wait_on
 		cubeList = compss_wait_on(cubeList)
 
+	first_day = True
 	for idx, day in enumerate(weekDays):
 		if cubeList[idx][0] == 0:
 			continue
@@ -386,14 +390,16 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 		#Build json file and array for plot
 		if "stops" in aggregation:
 			if format == 'json':
-				outFile = common.createJSONFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+				outFile = common.createJSONFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if first_day == True else 'a', 0)
 			else:
-				outFile = common.createCSVFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if idx == 0 else 'a', 0)
+				outFile = common.createCSVFileBusStops(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if first_day == True else 'a', 0)
 		else:
 			if format == 'json':
-				outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if idx == 0 else 'a', 0)
+				outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData, 'w' if first_day == True else 'a', 0)
 			else:
-				outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if idx == 0 else 'a', 0)
+				outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if first_day == True else 'a', 0)
+
+		first_day = False
 
 	return outFile
 
@@ -461,6 +467,7 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 		from pycompss.api.api import compss_wait_on
 		cubeList = compss_wait_on(cubeList)
 
+	first_day = True
 	for idx, day in enumerate(weekDays):
 		if cubeList[idx][0] == 0:
 			continue
@@ -472,9 +479,11 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 
 		#Build json file and array for plot
 		if format == 'json':
-			outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, None , dateData, 'w' if idx == 0 else 'a', 1)
+			outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, None , dateData, 'w' if first_day == True else 'a', 1)
 		else:
-			outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, None, dateData, 'w' if idx == 0 else 'a', 1)
+			outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, None, dateData, 'w' if first_day == True else 'a', 1)
+	
+		first_day = False
 
 	return outFile
 
