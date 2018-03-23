@@ -7,7 +7,7 @@ METRICS_BUS = ['MIN', 'MAX', 'AVG', 'SUM']
 METRICS_USER = ['MIN', 'MAX', 'COUNT', 'SUM']
 
 import timeit
-import logging 
+import logging
 import inspect
 
 #Functions for Ophidia aggregations
@@ -82,7 +82,7 @@ def buildValues(aggregation, dataList, day):
 							mainDimData[i] = [datetime.datetime.fromtimestamp(int(tmp[:-1])).strftime("%d.%m.%Y"),"F" if int(tmp[-1:]) == 1 else "M"]
 						else:
 							mainDimData[i] = [(datetime.datetime(1970, 1, 2) + datetime.timedelta(seconds=int(tmp[:-1]))).strftime("%d.%m.%Y"),"F" if int(tmp[-1:]) == 1 else "M"]
-					else:		
+					else:
 						mainDimData[i] = [numpy.nan, numpy.nan]
 		else:
 			if(k['name'] == 'cod_linha'):
@@ -247,7 +247,7 @@ def basicPassengerAggregation(parallelNcores, singleNcores, startCube, format, a
 
 def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode, logFlag):
 	#weekdays array
-	if aggregation == 'weekdays-hourly-lines' or aggregation == 'weekdays-hourly-stops': 
+	if aggregation == 'weekdays-hourly-lines' or aggregation == 'weekdays-hourly-stops':
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 		weekDaysId = []
 	else:
@@ -256,10 +256,10 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 
 	cubeList = [[0 for m in METRICS_BUS] for k in weekDays]
 	for idx, day in enumerate(weekDays):
-		#Build filter set 
+		#Build filter set
 		filter_list = ""
-		if aggregation == 'weekdays-hourly-lines' or aggregation == 'weekdays-hourly-stops': 
-			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
+		if aggregation == 'weekdays-hourly-lines' or aggregation == 'weekdays-hourly-stops':
+			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1)
 		else:
 			for j in weekDaysId[idx]:
 				tmp_filter_list = common.buildSubsetFilter(startDate, numDays, j)
@@ -276,7 +276,7 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 		if logFlag == True:
 			frame = inspect.getframeinfo(inspect.currentframe())
 			start_time = timeit.default_timer()
-		subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
+		subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)
 		if logFlag == True:
 			end_time = timeit.default_timer() - start_time
 			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
@@ -316,13 +316,13 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 			else:
 				outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, codLinhaData, dateData,  'w' if first_day == True else 'a', 0)
 
-		first_day = False	
+		first_day = False
 
 	return outFile
 
 def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode, logFlag):
 	#weekdays array
-	if aggregation == 'weekdays-lines' or aggregation == 'weekdays-stops': 
+	if aggregation == 'weekdays-lines' or aggregation == 'weekdays-stops':
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 		weekDaysId = []
 	else:
@@ -340,10 +340,10 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 
 	cubeList = [[0 for m in METRICS_BUS] for k in weekDays]
 	for idx, day in enumerate(weekDays):
-		#Build filter set 
+		#Build filter set
 		filter_list = ""
-		if aggregation == 'weekdays-lines' or aggregation == 'weekdays-stops': 
-			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
+		if aggregation == 'weekdays-lines' or aggregation == 'weekdays-stops':
+			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1)
 		else:
 			for j in weekDaysId[idx]:
 				tmp_filter_list = common.buildSubsetFilter(startDate, numDays, j)
@@ -359,7 +359,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 		#Extract relevant days
 		if logFlag == True:
 			start_time = timeit.default_timer()
-		subsettedCube = reducedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
+		subsettedCube = reducedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)
 		if logFlag == True:
 			end_time = timeit.default_timer() - start_time
 			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
@@ -405,7 +405,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 
 def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, startDate, numDays, format, outputFolder, user, pwd, host, port, mode, logFlag):
 	#weekdays array
-	if aggregation == 'weekdays-peakhours': 
+	if aggregation == 'weekdays-peakhours':
 		weekDays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 		weekDaysId = []
 	else:
@@ -429,9 +429,9 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 	cubeList = [[0 for m in METRICS_BUS] for k in weekDays]
 	for idx, day in enumerate(weekDays):
 		filter_list = ""
-		#Build filter set 
-		if aggregation == 'weekdays-peakhours': 
-			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1) 
+		#Build filter set
+		if aggregation == 'weekdays-peakhours':
+			filter_list = common.buildSubsetFilter(startDate, numDays, idx+1)
 		else:
 			for j in weekDaysId[idx]:
 				tmp_filter_list = common.buildSubsetFilter(startDate, numDays, j)
@@ -447,7 +447,7 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 		#Extract relevant days
 		if logFlag == True:
 			start_time = timeit.default_timer()
-		subsettedCube = aggregatedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)  
+		subsettedCube = aggregatedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)
 		if logFlag == True:
 			end_time = timeit.default_timer() - start_time
 			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
@@ -482,7 +482,7 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 			outFile = common.createJSONFileBusUsage(outputFolder, aggregation, passengerData, None , dateData, 'w' if first_day == True else 'a', 1)
 		else:
 			outFile = common.createCSVFileBusUsage(outputFolder, aggregation, passengerData, None, dateData, 'w' if first_day == True else 'a', 1)
-	
+
 		first_day = False
 
 	return outFile
@@ -515,7 +515,7 @@ def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid
 		cube.Cube.setclient(token=password, server=hostname, port=port)
 	else:
 		cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
-	sys.stdout = sys.__stdout__; 
+	sys.stdout = sys.__stdout__;
 
 	#Get Historical cube PID from metadata
 	cube.Cube.search(container_filter='bigsea',metadata_key_filter='datacube_name',metadata_value_filter='historical_'+measure,display=False)
@@ -607,8 +607,8 @@ def computeTicketingStat(parallelNcores, singleNcores, user, password, hostname,
 		cube.Cube.setclient(token=password, server=hostname, port=port)
 	else:
 		cube.Cube.setclient(username=user, password=password, server=hostname, port=port)
-	sys.stdout = sys.__stdout__; 
-		
+	sys.stdout = sys.__stdout__;
+
 	#Subset on weekdays (monday is 0)
 	numDays = (endDate - startDate).days + 1
 	startDay = startDate.isoweekday()

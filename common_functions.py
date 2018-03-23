@@ -10,22 +10,22 @@ def convertASCIItoNum(inString):
 	totLen = len(inString)
 	outNum = 0
 	for i in range(len(inString)):
-		#Get number of char and shift it of 32 (unused chars) 
+		#Get number of char and shift it of 32 (unused chars)
 		numText = (ord(inString[i]) - 32)
-		#Add char number elevated by reverse of position	
+		#Add char number elevated by reverse of position
 		outNum = outNum + (96**(totLen - (i+1)))*numText
 
 	return outNum
 
 def convertNumtoASCII(inNum):
 
-	outString = ""	
+	outString = ""
 	while(inNum > 0):
-		#Compute residual of position len - i 
+		#Compute residual of position len - i
 		r = int(inNum%96)
 		#Concatenate char to string (add 32 removed in coding)
 		outString = outString + chr(r+32)
-		#Divide by one position	
+		#Divide by one position
 		inNum = int(inNum/96)
 
 	return outString[::-1]
@@ -61,7 +61,7 @@ def aggregateData(args):
 	time = [calendar.timegm(k.timetuple()) for k in ar]
 	for time_index in range(0,len(time_val)-1):
 		for idx,t in enumerate(time):
-			if t >= time_val[time_index] and t < time_val[time_index+1]: 
+			if t >= time_val[time_index] and t < time_val[time_index+1]:
 				if not numpy.isnan(measure[time_index]):
 					measure[time_index] += values[idx] if values is not None else 1
 				else:
@@ -85,7 +85,7 @@ def aggregateDataDQ(args):
 	time = [calendar.timegm(k.timetuple()) for k in ar]
 	for time_index in range(0,len(time_val)-1):
 		for idx, t in enumerate(time):
-			if t >= time_val[time_index] and t < time_val[time_index+1]: 
+			if t >= time_val[time_index] and t < time_val[time_index+1]:
 				if not numpy.isnan(measure[time_index]):
 					measure[time_index] += 1
 					measure_dq1[time_index] += dq1[idx]
@@ -142,7 +142,7 @@ def createJSONFileBusStops(outputFolder, fileName, passengerData, busStopsData, 
 			#Loop on time
 			for c in range(0, len(passengerData[0][l])):
 				line['DATETIME'] =  dateData[c]
-				#In case only nans do not add line to output	
+				#In case only nans do not add line to output
 				stop_cond = 0
 				#Loop on measure
 				for i, m in enumerate(passengerData):
@@ -151,12 +151,12 @@ def createJSONFileBusStops(outputFolder, fileName, passengerData, busStopsData, 
 						break
 					else:
 						line[METRICS_BUS[i]] = round(m[l][c], 3)
-						
+
 				if stop_cond == 0:
 					json.dump(line, outfile, sort_keys=True)
 					outfile.write('\n')
 
-	return jsonFile	
+	return jsonFile
 
 def createJSONFilePassengerUsage(outputFolder, fileName, usageData, passengerData, dateData, mode, keepNan):
 
@@ -171,7 +171,7 @@ def createJSONFilePassengerUsage(outputFolder, fileName, usageData, passengerDat
 			#Loop on time
 			for c in range(0, len(usageData[0][l])):
 				line['DATETIME'] =  dateData[c]
-				#In case only nans do not add line to output	
+				#In case only nans do not add line to output
 				stop_cond = 0
 				#Loop on measure
 				for i, m in enumerate(usageData):
@@ -180,12 +180,12 @@ def createJSONFilePassengerUsage(outputFolder, fileName, usageData, passengerDat
 						break
 					else:
 						line[METRICS_USER[i]] = round(m[l][c], 3)
-						
+
 				if stop_cond == 0:
 					json.dump(line, outfile, sort_keys=True)
 					outfile.write('\n')
 
-	return jsonFile	
+	return jsonFile
 
 def createCSVFileBusUsage(outputFolder, fileName, passengerData, codLinhaData, dateData, mode, keepNan):
 
@@ -248,7 +248,7 @@ def createCSVFileBusStops(outputFolder, fileName, passengerData, busStopsData, d
 				if busStopsData:
 					row.append(int(busStopsData[l]))
 				row.append(dateData[c])
-				#In case only nans do not add line to output	
+				#In case only nans do not add line to output
 				stop_cond = 0
 				#Loop on measure
 				for i, m in enumerate(passengerData):
@@ -257,11 +257,11 @@ def createCSVFileBusStops(outputFolder, fileName, passengerData, busStopsData, d
 						break
 					else:
 						row.append(round(m[l][c], 3))
-						
+
 				if stop_cond == 0:
 					csvWriter.writerow(row)
 
-	return csvFile	
+	return csvFile
 
 def createCSVFilePassengerUsage(outputFolder, fileName,  usageData, passengerData, dateData, mode, keepNan):
 
@@ -288,7 +288,7 @@ def createCSVFilePassengerUsage(outputFolder, fileName,  usageData, passengerDat
 					row.append(passengerData[l][0])
 					row.append(passengerData[l][1])
 				row.append(dateData[c])
-				#In case only nans do not add line to output	
+				#In case only nans do not add line to output
 				stop_cond = 0
 				#Loop on measure
 				for i, m in enumerate(usageData):
@@ -297,11 +297,11 @@ def createCSVFilePassengerUsage(outputFolder, fileName,  usageData, passengerDat
 						break
 					else:
 						row.append(round(m[l][c], 3))
-						
+
 				if stop_cond == 0:
 					csvWriter.writerow(row)
 
-	return csvFile	
+	return csvFile
 
 def buildSubsetFilter(startDate, numDays, day):
 
@@ -313,7 +313,7 @@ def buildSubsetFilter(startDate, numDays, day):
 			filterList = filterList + "{0:.3f}".format(netCDF4.date2num(dayStart, units = 'hours since 2015-1-1 00:00:00', calendar = 'gregorian')) + ":" + "{0:.3f}".format(netCDF4.date2num(dayEnd, units = 'hours since 2015-1-1 00:00:00', calendar = 'gregorian')) + ","
 
 	if not filterList:
-		return None 
+		return None
 	else:
 		return filterList[:-1]
 
@@ -323,7 +323,7 @@ def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure, m
 	outnc = netCDF4.Dataset(filename, 'w', format='NETCDF4')
 	time_dim = outnc.createDimension('time', len(times))
 	line_dim = outnc.createDimension('cod_linha', None) # None means unlimited
-	vehicle_dim = outnc.createDimension('cod_veiculo', len(cod_veiculo)) 
+	vehicle_dim = outnc.createDimension('cod_veiculo', len(cod_veiculo))
 	time_var = outnc.createVariable('time', 'd', ('time',))
 	line_var = outnc.createVariable('cod_linha', numpy.int64, ('cod_linha',))
 	vehicle_var = outnc.createVariable('cod_veiculo', numpy.int64, ('cod_veiculo',))
@@ -331,7 +331,7 @@ def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure, m
 	measure_var = outnc.createVariable(measure_name, numpy.float32, ('cod_linha','cod_veiculo','time',), fill_value='NaN')
 
 	#Set metadata
-	time_var.units = 'hours since 2015-1-1 00:00:00' 
+	time_var.units = 'hours since 2015-1-1 00:00:00'
 	time_var.calendar = 'gregorian'
 	time_var.standard_name = 'time'
 	time_var.long_name = 'time'
@@ -352,8 +352,8 @@ def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure, m
 	#Add metadata
 	outnc.description = "Passenger count file"
 	outnc.cmor_version = "0.96f"
-	outnc.Conventions = "CF-1.0" 
-	outnc.frequency = "hourly" 
+	outnc.Conventions = "CF-1.0"
+	outnc.frequency = "hourly"
 
 	outnc.close()
 
@@ -401,7 +401,7 @@ def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, me
 	outnc = netCDF4.Dataset(filename, 'w', format='NETCDF4')
 	time_dim = outnc.createDimension('time', None) # None means unlimited
 	passenger_dim = outnc.createDimension('cod_passenger', len(cod_passenger)) # None means unlimited
-	line_dim = outnc.createDimension('cod_linha', len(cod_linha)) 
+	line_dim = outnc.createDimension('cod_linha', len(cod_linha))
 	time_var = outnc.createVariable('time', 'd', ('time',))
 	line_var = outnc.createVariable('cod_linha', numpy.int64, ('cod_linha',))
 	passenger_var = outnc.createVariable('cod_passenger', numpy.int64, ('cod_passenger',))
@@ -409,7 +409,7 @@ def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, me
 	measure_var = outnc.createVariable(measure_name, numpy.float32, ('time','cod_linha','cod_passenger',), fill_value='NaN')
 
 	#Set metadata
-	time_var.units = 'hours since 2015-1-1 00:00:00' 
+	time_var.units = 'hours since 2015-1-1 00:00:00'
 	time_var.calendar = 'gregorian'
 	time_var.standard_name = 'time'
 	time_var.long_name = 'time'
@@ -433,8 +433,8 @@ def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, me
 	#Add metadata
 	outnc.description = "Bus usage file"
 	outnc.cmor_version = "0.96f"
-	outnc.Conventions = "CF-1.0" 
-	outnc.frequency = "daily" 
+	outnc.Conventions = "CF-1.0"
+	outnc.frequency = "daily"
 
 	outnc.close()
 
@@ -449,7 +449,7 @@ def createSimplePlot(csvFile, plotName):
 		for row in csvReader:
 			for i, n in enumerate(plot_name):
 				if n in row[0]:
-					index = int((row[0].split(n +" ",1)[1]).split('-')[0]) 
+					index = int((row[0].split(n +" ",1)[1]).split('-')[0])
 					plot_data[i][index] = float(row[4])
 
 		fig = plt.figure()

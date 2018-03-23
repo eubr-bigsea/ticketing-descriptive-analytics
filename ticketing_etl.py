@@ -7,12 +7,12 @@ from PyOphidia import cube, client
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import common_functions as common
 
-def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode):
+def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag):
 
 	#Loop on input files
 	data = [0 for m in range(0, len(inputFiles))]
 	for i, e in enumerate(inputFiles):
-		data[i] = extractFromFile(tmpFolder, e, procType, mode)
+		data[i] = extractFromFile(tmpFolder, e, procType, mode, delFlag)
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -71,14 +71,14 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode):
 
 	return outputData
 
-def extractFromFile(inputFolder, inputName, procType, mode):
+def extractFromFile(inputFolder, inputName, procType, mode, delFlag):
 	if procType != "busStops":
 		if mode == 'compss':
 			from compss_functions import compssExtractFromFile
-			return compssExtractFromFile(inputFolder, inputName)
+			return compssExtractFromFile(inputFolder, inputName, delFlag)
 		else:
 			from internal_functions import internalExtractFromFile
-			return internalExtractFromFile(inputFolder, inputName)
+			return internalExtractFromFile(inputFolder, inputName, delFlag)
 	else:
 		#Pre-process CSV file from EMaaS
 		if mode == 'compss':
@@ -101,7 +101,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 
 		diff_y = [y[i] != y[i+1] for i in range(0,len(y)-1)]
 		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
-		diff = numpy.logical_or(diff_x, diff_y)  
+		diff = numpy.logical_or(diff_x, diff_y)
 
 		t = pandas.to_datetime(t, format='%d/%m/%y %H:%M:%S,%f')
 
@@ -144,7 +144,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			#Append last
 			count = count + 1
 			row_task.append(count)
-		
+
 			#Compute number of sub_times per task based on row
 			partitions = []
 			count = 0
@@ -163,7 +163,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			for p in partitions:
 				for i in range(current,len(sub_times)):
 					count = count + len(sub_times[i])
-					current = current + 1 
+					current = current + 1
 					if count == p or not sub_times:
 						splits.append(current)
 						count = 0
@@ -237,21 +237,21 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		resultList = []
 		for r in results:
 			resultList.append(r)
-			
+
 		measure = numpy.concatenate(resultList, axis=0)
 
 		if dq1 is not None and dq2 is not None and dq3 is not None:
 			resultList = []
 			for r in results_dq1:
-				resultList.append(r)		
+				resultList.append(r)
 			measure_dq1 = numpy.concatenate(resultList, axis=0)
 			resultList = []
 			for r in results_dq2:
-				resultList.append(r)		
+				resultList.append(r)
 			measure_dq2 = numpy.concatenate(resultList, axis=0)
 			resultList = []
 			for r in results_dq3:
-				resultList.append(r)		
+				resultList.append(r)
 			measure_dq3 = numpy.concatenate(resultList, axis=0)
 
 		#Create NetCDF file
@@ -282,7 +282,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 
 		diff_y = [y[i] != y[i+1] for i in range(0,len(y)-1)]
 		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
-		diff = numpy.logical_or(diff_x, diff_y)  
+		diff = numpy.logical_or(diff_x, diff_y)
 
 		t = pandas.to_datetime(t, format='%d/%m/%y %H:%M:%S,%f')
 
@@ -325,7 +325,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			#Append last
 			count = count + 1
 			row_task.append(count)
-		
+
 			#Compute number of sub_times per task based on row
 			partitions = []
 			count = 0
@@ -344,7 +344,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			for p in partitions:
 				for i in range(current,len(sub_times)):
 					count = count + len(sub_times[i])
-					current = current + 1 
+					current = current + 1
 					if count == p or not sub_times:
 						splits.append(current)
 						count = 0
@@ -418,21 +418,21 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		resultList = []
 		for r in results:
 			resultList.append(r)
-			
+
 		measure = numpy.concatenate(resultList, axis=0)
 
 		if dq1 is not None and dq2 is not None and dq3 is not None:
 			resultList = []
 			for r in results_dq1:
-				resultList.append(r)		
+				resultList.append(r)
 			measure_dq1 = numpy.concatenate(resultList, axis=0)
 			resultList = []
 			for r in results_dq2:
-				resultList.append(r)		
+				resultList.append(r)
 			measure_dq2 = numpy.concatenate(resultList, axis=0)
 			resultList = []
 			for r in results_dq3:
-				resultList.append(r)		
+				resultList.append(r)
 			measure_dq3 = numpy.concatenate(resultList, axis=0)
 
 		#Match extra attributes with unique users
@@ -448,7 +448,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		for p,v in enumerate(x):
 			if sub_w[p] is not pandas.NaT:
 				x[p] = int(str(int(time.mktime(sub_w[p].timetuple()))) + str(1 if sub_z[p] == "F" else 2))
-			else:		
+			else:
 				x[p] = 0
 
 		#Create NetCDF file
@@ -625,17 +625,17 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 	if len(fileRef) != 1 and len(fileRef) != 4:
 		raise RuntimeError("Number of input files is not correct")
 
-	if distribution in "distributed":	
+	if distribution in "distributed":
 		cube.Cube.script(script='bigsea_retrieve',args=fileRef[0]+'|token',display=False)
 		data = json.loads(cube.Cube.client.last_response)
 		inputFile = data['response'][0]['objcontent'][0]["message"].splitlines()[0]
 	else:
 		inputFile = fileRef[0]
-	
+
 	dq_files = []
 	if len(fileRef) == 4:
 		for f in fileRef[1:]:
-			if distribution in "distributed":	
+			if distribution in "distributed":
 				cube.Cube.script(script='bigsea_retrieve',args=f+'|token',display=False)
 				data = json.loads(cube.Cube.client.last_response)
 				inputF = data['response'][0]['objcontent'][0]["message"].splitlines()[0]
@@ -649,8 +649,8 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 		inputFile = inputFile[len(cube.Cube.client.base_src_path):]
 
 		if len(dq_files) > 0:
-			for i in range(len(dq_files)): 
-				dq_files[i] = dq_files[i][len(cube.Cube.client.base_src_path):]			
+			for i in range(len(dq_files)):
+				dq_files[i] = dq_files[i][len(cube.Cube.client.base_src_path):]
 
 	if logFlag == True:
 		end_time = timeit.default_timer() - start_time
@@ -670,7 +670,7 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 		pid.append(historicalCube.pid)
 		if len(dq_files) > 0:
-			for i in range(len(dq_files)): 
+			for i in range(len(dq_files)):
 				historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 				pid.append(historicalCube_dq.pid)
 
@@ -678,7 +678,7 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 		pid.append(historicalCube.pid)
 		if len(dq_files) > 0:
-			for i in range(len(dq_files)): 
+			for i in range(len(dq_files)):
 				historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 				pid.append(historicalCube_dq.pid)
 
@@ -694,7 +694,7 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='start_date',metadata_value=str(times[0].date()), display=False)
 	historicalCube.metadata(mode='insert',metadata_type='text',metadata_key='end_date',metadata_value=str(times[-1].date()), display=False)
 
-	sys.stdout = sys.__stdout__; 
+	sys.stdout = sys.__stdout__;
 
 	return pid
 

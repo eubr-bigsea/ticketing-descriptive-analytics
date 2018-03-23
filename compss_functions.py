@@ -16,9 +16,9 @@ def compssAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, pol
 
 	return internal.internalAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, policyFile)
 
-@task(inputFolder=IN, inputName=IN, returns=pandas.DataFrame)
-def compssExtractFromFile(inputFolder, inputName):
-	return internal.internalExtractFromFile(inputFolder, inputName)
+@task(inputFolder=IN, inputName=IN, delFlag=IN, returns=pandas.DataFrame)
+def compssExtractFromFile(inputFolder, inputName, delFlag):
+	return internal.internalExtractFromFile(inputFolder, inputName, delFlag)
 
 @task(inputFolder=IN, inputName=IN, returns=pandas.DataFrame)
 def compssExtractFromEMFile(inputFolder, inputName):

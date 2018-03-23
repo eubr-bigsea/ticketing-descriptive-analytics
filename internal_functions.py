@@ -29,7 +29,7 @@ def internalAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, p
 			command_resp = command_resp.decode("utf-8")
 
 			if 'Anonymized document generated in: ' in command_resp:
-				anonymFile = command_resp.split("Anonymized document generated in: ",1)[1] 
+				anonymFile = command_resp.split("Anonymized document generated in: ",1)[1]
 			else:
 				raise RuntimeError("Error in running anoymization")
 
@@ -42,7 +42,7 @@ def internalAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, p
 
 	return None
 
-def internalExtractFromFile(inputFolder, inputName):
+def internalExtractFromFile(inputFolder, inputName, delFlag):
 
 	inputFile = os.path.join(inputFolder, inputName)
 	if os.path.isfile(inputFile):
@@ -61,7 +61,8 @@ def internalExtractFromFile(inputFolder, inputName):
 			#Convert from json to Pandas dataframe
 			newData = pandas.read_json(json_text, lines=False)
 
-			os.remove(inputFile)
+			if delFlag == True:
+				os.remove(inputFile)
 			return newData
 
 	return None
