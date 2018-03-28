@@ -8,13 +8,13 @@ from pycompss.api.task import task
 from pycompss.api.parameter import *
 from pycompss.api.api import compss_wait_on
 
-@task(anonymizationBin=IN, inputName=IN, inputFolder=IN, tmpFolder=IN, policyFile=IN, returns=str)
-def compssAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, policyFile):
+@task(anonymizationBin=IN, inputFile=IN, tmpFolder=IN, policyFile=IN, returns=str)
+def compssAnonymizeFile(anonymizationBin, inputFile, tmpFolder, policyFile):
 	#Create tmp folder
 	if not os.path.exists(tmpFolder):
 	    os.makedirs(tmpFolder)
 
-	return internal.internalAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, policyFile)
+	return internal.internalAnonymizeFile(anonymizationBin, inputFile, tmpFolder, policyFile)
 
 @task(inputFolder=IN, inputName=IN, delFlag=IN, returns=pandas.DataFrame)
 def compssExtractFromFile(inputFolder, inputName, delFlag):

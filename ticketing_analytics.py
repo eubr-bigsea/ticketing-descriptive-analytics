@@ -239,11 +239,13 @@ if __name__ == "__main__":
 
 		anonymFile = [None, None]
 		if procType != "busStops" or procType == "all":
-			anonymFile[0] = [None for m in range(0,len(os.listdir(inputFolderDQ)))]
-			for i, e in enumerate(sorted(os.listdir(inputFolderDQ))):
+
+			fileNum, fileList = common.getFiles(inputFolderDQ)
+			anonymFile[0] = [None for m in range(0,fileNum)]
+			for i, e in enumerate(sorted(fileList)):
 				if benchmark == True:
 					start_time = timeit.default_timer()
-				anonymFile[0][i] = privacy.anonymize1File(anonymizationBin1, e, inputFolderDQ, tmpFolder, policyFile1, mode)
+				anonymFile[0][i] = privacy.anonymize1File(anonymizationBin1, e, tmpFolder, policyFile1, mode)
 				if benchmark == True:
 					final_time = timeit.default_timer() - start_time
 					print("Time required on file: "+ str(final_time))
@@ -257,13 +259,12 @@ if __name__ == "__main__":
 			anonymFile[0] = [v for v in anonymFile[0] if v is not None]
 
 		if procType == "busStops" or procType == "all":
-			anonymFile[1] = [None for m in range(0,len(os.listdir(inputFolderEM)))]
-			for i, e in enumerate(sorted(os.listdir(inputFolderEM))):
-				e = os.path.join(inputFolderEM, e)
-				if os.path.isfile(e):
-					inFilename, inFileExt = os.path.splitext(e)
-					if inFileExt == '.csv':
-						anonymFile[1][i] = e
+
+			fileNum, fileList = common.getFiles(inputFolderEM)
+			anonymFile[1] = [None for m in range(0,fileNum)]
+			for i, e in enumerate(sorted(fileList)):
+				if os.path.isfile(e) and common.checkFormat(e, "csv"):
+					anonymFile[1][i] = e
 
 			#Drop empty cells in array
 			anonymFile[1] = [v for v in anonymFile[1] if v is not None]

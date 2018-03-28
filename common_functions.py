@@ -1,9 +1,38 @@
-import os, shutil, subprocess, csv, calendar, datetime
+import os, shutil, subprocess, json, csv, calendar, datetime
 import numpy, netCDF4
 
 #Global lists of metrics being computed
 METRICS_BUS = ['MIN', 'MAX', 'AVG', 'SUM']
 METRICS_USER = ['MIN', 'MAX', 'COUNT', 'SUM']
+
+
+def checkFormat(inputFile, format):
+	with open(inputFile) as f:
+		firstLine = f.readline()
+		try:
+			if format == "json":
+				jsonLine = json.loads(firstLine)
+			elif format == "csv":
+				csvreader = csv.reader(firstLine, delimiter=",")
+		except ValueError, e:
+			print("File " + inputFile + " is not in "+format)
+			return False
+
+		return True
+
+	return False
+
+def getFiles(inputFolder):
+	#Count input files
+	file_num = 0
+	file_list = []
+	for root, dirs, files in os.walk(inputFolder):
+		for f in files:
+			if f != "_SUCCESS":
+				file_num = file_num + 1
+				file_list.append(root+"/"+f)
+
+	return file_num, file_list
 
 def convertASCIItoNum(inString):
 
@@ -33,12 +62,7 @@ def convertNumtoASCII(inNum):
 def jsonLine2json(filename):
 
 	inFilename, inFileExt = os.path.splitext(filename)
-
-	outFileName = ""
-	if inFileExt == '.txt':
-		outFileName = inFilename + ".json"
-	else:
-		raise RuntimeError("Input file not valid")
+	outFileName = inFilename + ".json"
 
 	shutil.copyfile(filename, outFileName)
 

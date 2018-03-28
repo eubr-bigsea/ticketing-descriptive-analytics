@@ -1,13 +1,13 @@
 import os, subprocess
 
-def anonymize1File(anonymizationBin, inputName, inputFolder, tmpFolder, policyFile, mode):
+def anonymize1File(anonymizationBin, inputFile, tmpFolder, policyFile, mode):
 
 	if mode == 'compss':
 		from compss_functions import compssAnonymizeFile
-		return compssAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, policyFile)
+		return compssAnonymizeFile(anonymizationBin, inputFile, tmpFolder, policyFile)
 	else:
 		from internal_functions import internalAnonymizeFile
-		return internalAnonymizeFile(anonymizationBin, inputName, inputFolder, tmpFolder, policyFile)
+		return internalAnonymizeFile(anonymizationBin, inputFile, tmpFolder, policyFile)
 
 def anonymize3File(anonymizationBin, inputName, inputFolder, outputFolder, policyFile, mode):
 
