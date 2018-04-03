@@ -39,7 +39,7 @@ def internalAnonymizeFile(anonymizationBin, inputFile, tmpFolder, policyFile):
 
 	return None
 
-def internalExtractFromFile(inputFolder, inputName, delFlag):
+def internalExtractFromFile(inputFolder, inputName, delFlag, columnList):
 
 	inputFile = os.path.join(inputFolder, inputName)
 	if os.path.isfile(inputFile):
@@ -57,14 +57,14 @@ def internalExtractFromFile(inputFolder, inputName, delFlag):
 
 			#Convert from json to Pandas dataframe
 			newData = pandas.read_json(json_text, lines=False)
-
+			newData.drop(list(set(newData.columns) - set(columnList)), axis=1, inplace=True)
 			if delFlag == True:
 				os.remove(inputFile)
 			return newData
 
 	return None
 
-def internalExtractFromEMFile(inputFolder, inputName):
+def internalExtractFromEMFile(inputFolder, inputName, columnList):
 
 	inputFile = os.path.join(inputFolder, inputName)
 	if os.path.isfile(inputFile):
@@ -77,9 +77,9 @@ def internalExtractFromEMFile(inputFolder, inputName):
 				filedate = (os.path.basename(inputFile)).split('-')[0]
 				filedate = datetime.strptime(filedate, '%Y_%m_%d').strftime('%d/%m/%y')
 				#Convert from CSV to Pandas dataframe
-				newData = pandas.read_csv(f, skip_blank_lines = True, skipinitialspace=True, header=None, names = ['route', 'tripNum', 'shapeId', 'shapeSequence', 'shapeLat', 'shapeLon', 'distanceTravelledShape', 'busCode', 'gpsPointId', 'gpsLat', 'gpsLon', 'distanceToShapePoint', 'timestamp', 'stopPointId', 'problem', 'numberTickets'], usecols = ['route', 'tripNum', 'busCode', 'timestamp', 'stopPointId', 'numberTickets'], na_values = '-')
+				newData = pandas.read_csv(f, skip_blank_lines = True, skipinitialspace=True, header=None, names = ['route', 'tripNum', 'shapeId', 'shapeSequence', 'shapeLat', 'shapeLon', 'distanceTravelledShape', 'busCode', 'gpsPointId', 'gpsLat', 'gpsLon', 'distanceToShapePoint', 'timestamp', 'stopPointId', 'problem', 'numberTickets'], usecols = columnList, na_values = '-')
 				newData = newData[newData.stopPointId.notnull() & newData.timestamp.notnull() & newData.numberTickets.notnull()]
-				newData.timestamp = filedate + " " + newData.timestamp
+				newData.timestamp = pandas.to_datetime(filedate + " " + newData.timestamp, format='%d/%m/%y %H:%M:%S')
 
 			return newData
 

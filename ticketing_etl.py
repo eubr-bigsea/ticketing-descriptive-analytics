@@ -9,10 +9,24 @@ import common_functions as common
 
 def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag):
 
+	#Define list of columns required for processing
+	if procType == "busUsage":
+		if dq_flag == True: 
+			columnList = ['CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO', 'COMPLETENESS_MISSING', 'TIMELINESS_DATAUTILIZACAO', 'ASSOCIATION_CONSISTENCY']
+		else:
+			columnList = ['CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO']
+	elif procType == "passengerUsage":
+		if dq_flag == True: 
+			columnList = ['NUMEROCARTAO', 'CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO', 'NUMEROCARTAO', 'DATANASCIMENTO', 'SEXO', 'COMPLETENESS_MISSING', 'TIMELINESS_DATAUTILIZACAO', 'ASSOCIATION_CONSISTENCY']
+		else:
+			columnList = ['NUMEROCARTAO', 'CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO', 'NUMEROCARTAO', 'DATANASCIMENTO', 'SEXO']
+	elif procType == "busStops":
+		columnList = ['route', 'tripNum', 'busCode', 'timestamp', 'stopPointId', 'numberTickets']
+
 	#Loop on input files
 	data = [0 for m in range(0, len(inputFiles))]
 	for i, e in enumerate(inputFiles):
-		data[i] = extractFromFile(tmpFolder, e, procType, mode, delFlag)
+		data[i] = extractFromFile(tmpFolder, e, procType, mode, delFlag, columnList)
 
 	if mode == "compss":
 		from pycompss.api.api import compss_wait_on
@@ -26,7 +40,7 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag):
 
 		line = data['CODLINHA'].values.flatten('F')
 		vehicle = data['CODVEICULO'].values.flatten('F')
-		time = data['DATAUTILIZACAO'].values.flatten('F')
+		time = pandas.to_datetime(data['DATAUTILIZACAO'].values.flatten('F'), format='%d/%m/%y %H:%M:%S,%f')
 
 		completeness = None
 		consistency = None
@@ -42,8 +56,19 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag):
 		data.sort_values(['NUMEROCARTAO', 'CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO'], ascending=[True, True, True, True], inplace=True)
 
 		line = data['CODLINHA'].values.flatten('F')
-		time = data['DATAUTILIZACAO'].values.flatten('F')
+		time = pandas.to_datetime(data['DATAUTILIZACAO'].values.flatten('F'), format='%d/%m/%y %H:%M:%S,%f')
 		number = data['NUMEROCARTAO'].values.flatten('F')
+
+		newNumber = numpy.empty([len(number)], dtype=numpy.int64)
+		newNumber[0] = 1
+		idx = 1
+		for i in range(1,len(number)):
+			if number[i-1] != number[i]:
+				idx = idx + 1
+			newNumber[i] = idx
+
+		number = newNumber
+
 		birthDate = data['DATANASCIMENTO'].values.flatten('F')
 		gender = data['SEXO'].values.flatten('F')
 
@@ -71,22 +96,22 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag):
 
 	return outputData
 
-def extractFromFile(inputFolder, inputName, procType, mode, delFlag):
+def extractFromFile(inputFolder, inputName, procType, mode, delFlag, columnList):
 	if procType != "busStops":
 		if mode == 'compss':
 			from compss_functions import compssExtractFromFile
-			return compssExtractFromFile(inputFolder, inputName, delFlag)
+			return compssExtractFromFile(inputFolder, inputName, delFlag, columnList)
 		else:
 			from internal_functions import internalExtractFromFile
-			return internalExtractFromFile(inputFolder, inputName, delFlag)
+			return internalExtractFromFile(inputFolder, inputName, delFlag, columnList)
 	else:
 		#Pre-process CSV file from EMaaS
 		if mode == 'compss':
 			from compss_functions import compssExtractFromEMFile
-			return compssExtractFromEMFile(inputFolder, inputName)
+			return compssExtractFromEMFile(inputFolder, inputName, columnList)
 		else:
 			from internal_functions import internalExtractFromEMFile
-			return internalExtractFromEMFile(inputFolder, inputName)
+			return internalExtractFromEMFile(inputFolder, inputName, columnList)
 
 def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 
@@ -103,10 +128,9 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
 		diff = numpy.logical_or(diff_x, diff_y)
 
-		t = pandas.to_datetime(t, format='%d/%m/%y %H:%M:%S,%f')
-
 		#Split time array based on external dimensions
 		records_split = numpy.where(diff)[0]+1
+
 		sub_times = numpy.split(t, records_split)
 		if dq1 is not None and dq2 is not None and dq3 is not None:
 			sub_dq1 = numpy.split(dq1, records_split)
@@ -117,14 +141,20 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		sub_x = numpy.take(x, records_split)
 		sub_y = numpy.take(y, records_split)
 
+		tLen = len(t)
+		tMin = min(t)
+		tMax = max(t)
+
+		del diff, diff_y, t
+
 		x = numpy.unique(x)
 		y = numpy.unique(y)
 
 		#Define partitions for concurrent execution
 		if int(multiProcesses) > 1:
 			#Compute exact number or records per task
-			minNum = math.floor(len(t) / float(multiProcesses))
-			remainder = len(t) % minNum
+			minNum = math.floor(tLen / float(multiProcesses))
+			remainder = tLen % minNum
 			record_task = []
 			for i in range(0,int(multiProcesses)):
 				if remainder > 0:
@@ -156,6 +186,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 						count = 0
 						break
 
+			del row_task, record_task
+
 			#Split arrays
 			count = 0
 			current = 0
@@ -178,6 +210,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 				sub_dq3 = numpy.array_split(sub_dq3, splits)
 
 			threadNum = len(splits) if len(splits) < multiProcesses else multiProcesses
+			del partitions, splits
 		else:
 			sub_times = [sub_times]
 			sub_x = [sub_x]
@@ -189,8 +222,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			threadNum = 1
 
 		#Define time dimension (aggregate on time period)
-		start_date = min(t)
-		end_date = max(t)
+		start_date = tMin
+		end_date = tMax
 		interval = end_date.date() - start_date.date()
 		start_time = calendar.timegm(start_date.date().timetuple())
 		time_len = (interval.days + 1)*int((24*3600)/time_period)
@@ -234,11 +267,14 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 					results_dq2[i] = res[i][2]
 					results_dq3[i] = res[i][3]
 
+		del sub_x, sub_y, sub_times
+
 		resultList = []
 		for r in results:
 			resultList.append(r)
 
 		measure = numpy.concatenate(resultList, axis=0)
+		del resultList, results
 
 		if dq1 is not None and dq2 is not None and dq3 is not None:
 			resultList = []
@@ -253,6 +289,11 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			for r in results_dq3:
 				resultList.append(r)
 			measure_dq3 = numpy.concatenate(resultList, axis=0)
+
+			del resultList, results_dq1, results_dq2, results_dq3
+
+		import gc
+		gc.collect()
 
 		#Create NetCDF file
 		start_time = datetime.datetime.strptime(datetime.datetime.utcfromtimestamp(time_val[0]).strftime('%Y-%m-%d %H:%M:%S'), "%Y-%m-%d %H:%M:%S")
@@ -271,6 +312,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 
 	elif procType == "passengerUsage":
 		time_period = 86400
+
 		x = data[0]
 		y = data[1]
 		t = data[2]
@@ -284,8 +326,6 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
 		diff = numpy.logical_or(diff_x, diff_y)
 
-		t = pandas.to_datetime(t, format='%d/%m/%y %H:%M:%S,%f')
-
 		#Split time array based on external dimensions
 		records_split = numpy.where(diff)[0]+1
 		sub_times = numpy.split(t, records_split)
@@ -298,14 +338,20 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		sub_x = numpy.take(x, records_split)
 		sub_y = numpy.take(y, records_split)
 
+		tLen = len(t)
+		tMin = min(t)
+		tMax = max(t)
+
+		del diff, diff_y, t
+
 		x = numpy.unique(x)
 		y = numpy.unique(y)
 
 		#Define partitions for concurrent execution
 		if int(multiProcesses) > 1:
 			#Compute exact number or records per task
-			minNum = math.floor(len(t) / float(multiProcesses))
-			remainder = len(t) % minNum
+			minNum = math.floor(tLen / float(multiProcesses))
+			remainder = tLen % minNum
 			record_task = []
 			for i in range(0,int(multiProcesses)):
 				if remainder > 0:
@@ -337,6 +383,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 						count = 0
 						break
 
+			del row_task, record_task
+
 			#Split arrays
 			count = 0
 			current = 0
@@ -359,6 +407,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 				sub_dq3 = numpy.array_split(sub_dq3, splits)
 
 			threadNum = len(splits) if len(splits) < multiProcesses else multiProcesses
+
+			del partitions, splits
 		else:
 			sub_times = [sub_times]
 			sub_x = [sub_x]
@@ -370,8 +420,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			threadNum = 1
 
 		#Define time dimension (aggregate on time period)
-		start_date = min(t)
-		end_date = max(t)
+		start_date = tMin
+		end_date = tMax
 		interval = end_date.date() - start_date.date()
 		start_time = calendar.timegm(start_date.date().timetuple())
 		time_len = (interval.days + 1)*int((24*3600)/time_period)
@@ -415,11 +465,14 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 					results_dq2[i] = res[i][2]
 					results_dq3[i] = res[i][3]
 
+		del sub_x, sub_y, sub_times
+
 		resultList = []
 		for r in results:
 			resultList.append(r)
 
 		measure = numpy.concatenate(resultList, axis=0)
+		del resultList, results
 
 		if dq1 is not None and dq2 is not None and dq3 is not None:
 			resultList = []
@@ -435,21 +488,32 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 				resultList.append(r)
 			measure_dq3 = numpy.concatenate(resultList, axis=0)
 
+			del resultList, results_dq1, results_dq2, results_dq3
+
+
 		#Match extra attributes with unique users
 		#x = [p for p,v in enumerate(x)]
-		w = pandas.to_datetime(w, format='%d/%m/%y', errors='coerce')
-		w = [k if k < numpy.datetime64('2018-01-01') else k.replace(year=k.year-100) for k in w]
+		w = pandas.to_datetime(w, format='%d/%m/%y', errors='coerce').to_pydatetime()
+		k = datetime.datetime(2018, 1, 10, 0, 0)
+		for i in range(len(w)):
+			if w[i] >= k:
+				w[i] = w[i].replace(year=w[i].year-100)
 		records_split = numpy.where(diff_x)[0]+1
 		records_split = numpy.insert(records_split,0,0)
 		sub_w = numpy.take(w, records_split)
 		sub_z = numpy.take(z, records_split)
 
 		#Convert extra attributes to integer (when value is available)
-		for p,v in enumerate(x):
+		for p in range(len(x)):
 			if sub_w[p] is not pandas.NaT:
 				x[p] = int(str(int(time.mktime(sub_w[p].timetuple()))) + str(1 if sub_z[p] == "F" else 2))
 			else:
 				x[p] = 0
+
+		del sub_w, sub_z, w, z, records_split
+
+		import gc
+		gc.collect()
 
 		#Create NetCDF file
 		start_time = datetime.datetime.strptime(datetime.datetime.utcfromtimestamp(time_val[0]).strftime('%Y-%m-%d %H:%M:%S'), "%Y-%m-%d %H:%M:%S")
@@ -477,8 +541,6 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
 		diff = numpy.logical_or(diff_x, diff_y)
 
-		t = pandas.to_datetime(t, format='%d/%m/%y %H:%M:%S')
-
 		#Split time array based on external dimensions
 		records_split = numpy.where(diff)[0]+1
 		sub_times = numpy.split(t, records_split)
@@ -488,14 +550,20 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		sub_x = numpy.take(x, records_split)
 		sub_y = numpy.take(y, records_split)
 
+		tLen = len(t)
+		tMin = min(t)
+		tMax = max(t)
+
+		del diff, diff_y, t
+
 		x = numpy.unique(x)
 		y = numpy.unique(y)
 
 		#Define partitions for concurrent execution
 		if int(multiProcesses) > 1:
 			#Compute exact number or records per task
-			minNum = math.floor(len(t) / float(multiProcesses))
-			remainder = len(t) % minNum
+			minNum = math.floor(tLen / float(multiProcesses))
+			remainder = tLen % minNum
 			record_task = []
 			for i in range(0,int(multiProcesses)):
 				if remainder > 0:
@@ -527,6 +595,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 						count = 0
 						break
 
+			del row_task, record_task
+
 			#Split arrays
 			count = 0
 			current = 0
@@ -545,6 +615,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			sub_x = numpy.array_split(sub_x, splits)
 			sub_y = numpy.array_split(sub_y, splits)
 			threadNum = len(splits) if len(splits) < multiProcesses else multiProcesses
+			del partitions, splits
 		else:
 			sub_times = [sub_times]
 			sub_m = [sub_m]
@@ -553,8 +624,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			threadNum = 1
 
 		#Define time dimension (aggregate on time period)
-		start_date = min(t)
-		end_date = max(t)
+		start_date = tMin
+		end_date = tMax
 		interval = end_date.date() - start_date.date()
 		start_time = calendar.timegm(start_date.date().timetuple())
 		time_len = (interval.days + 1)*int((24*3600)/time_period)
@@ -575,11 +646,17 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 			from pycompss.api.api import compss_wait_on
 			results = compss_wait_on(results)
 
+		del sub_x, sub_y, sub_times
+
 		resultList = []
 		for r in results:
 			resultList.append(r)
 
 		measure = numpy.concatenate(resultList, axis=0)
+		del resultList, results
+
+		import gc
+		gc.collect()
 
 		#Create NetCDF file
 		start_time = datetime.datetime.strptime(datetime.datetime.utcfromtimestamp(time_val[0]).strftime('%Y-%m-%d %H:%M:%S'), "%Y-%m-%d %H:%M:%S")

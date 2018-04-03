@@ -16,13 +16,13 @@ def compssAnonymizeFile(anonymizationBin, inputFile, tmpFolder, policyFile):
 
 	return internal.internalAnonymizeFile(anonymizationBin, inputFile, tmpFolder, policyFile)
 
-@task(inputFolder=IN, inputName=IN, delFlag=IN, returns=pandas.DataFrame)
-def compssExtractFromFile(inputFolder, inputName, delFlag):
-	return internal.internalExtractFromFile(inputFolder, inputName, delFlag)
+@task(inputFolder=IN, inputName=IN, delFlag=IN, columnList=IN, returns=pandas.DataFrame)
+def compssExtractFromFile(inputFolder, inputName, delFlag, columnList):
+	return internal.internalExtractFromFile(inputFolder, inputName, delFlag, columnList)
 
-@task(inputFolder=IN, inputName=IN, returns=pandas.DataFrame)
-def compssExtractFromEMFile(inputFolder, inputName):
-	return internal.internalExtractFromEMFile(inputFolder, inputName)
+@task(inputFolder=IN, inputName=IN, columnList=IN, returns=pandas.DataFrame)
+def compssExtractFromEMFile(inputFolder, inputName, columnList):
+	return internal.internalExtractFromEMFile(inputFolder, inputName, columnList)
 
 @task(sub_x=IN, sub_y=IN, sub_times=IN, x=IN, y=IN, time_val=IN, returns=numpy.ndarray)
 def compssTransform(sub_x, sub_y, sub_times, x, y, time_val):

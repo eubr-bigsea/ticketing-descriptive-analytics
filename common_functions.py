@@ -8,7 +8,7 @@ METRICS_USER = ['MIN', 'MAX', 'COUNT', 'SUM']
 
 def checkFormat(inputFile, format):
 	with open(inputFile) as f:
-		firstLine = f.readline()
+		"""firstLine = f.readline()
 		try:
 			if format == "json":
 				jsonLine = json.loads(firstLine)
@@ -16,7 +16,7 @@ def checkFormat(inputFile, format):
 				csvreader = csv.reader(firstLine, delimiter=",")
 		except ValueError, e:
 			print("File " + inputFile + " is not in "+format)
-			return False
+			return False"""
 
 		return True
 
@@ -28,7 +28,7 @@ def getFiles(inputFolder):
 	file_list = []
 	for root, dirs, files in os.walk(inputFolder):
 		for f in files:
-			if f != "_SUCCESS":
+			if f != "_SUCCESS" and not f.startswith('.') and not f.startswith("tmp_") and not f.endswith("_anonymized.json"):
 				file_num = file_num + 1
 				file_list.append(root+"/"+f)
 
@@ -61,8 +61,10 @@ def convertNumtoASCII(inNum):
 
 def jsonLine2json(filename):
 
-	inFilename, inFileExt = os.path.splitext(filename)
-	outFileName = inFilename + ".json"
+	inFile, inFileExt = os.path.splitext(filename)
+	inFilename = os.path.basename(inFile)
+	inFilepath = os.path.dirname(inFile)
+	outFileName = os.path.join(inFilepath, "tmp_" + inFilename + ".json")
 
 	shutil.copyfile(filename, outFileName)
 
@@ -83,13 +85,25 @@ def aggregateData(args):
 		values = None
 	measure = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
 	time = [calendar.timegm(k.timetuple()) for k in ar]
-	for time_index in range(0,len(time_val)-1):
+
+	if values is not None:
 		for idx,t in enumerate(time):
-			if t >= time_val[time_index] and t < time_val[time_index+1]:
-				if not numpy.isnan(measure[time_index]):
-					measure[time_index] += values[idx] if values is not None else 1
-				else:
-					measure[time_index] = values[idx] if values is not None else 1
+			for time_index in range(0,len(time_val)-1):
+				if t >= time_val[time_index] and t < time_val[time_index+1]:
+					if not numpy.isnan(measure[time_index]):
+						measure[time_index] += values[idx]
+					else:
+						measure[time_index] = values[idx]
+					break
+	else:
+		for idx,t in enumerate(time):
+			for time_index in range(0,len(time_val)-1):
+				if t >= time_val[time_index] and t < time_val[time_index+1]:
+					if not numpy.isnan(measure[time_index]):
+						measure[time_index] += 1
+					else:
+						measure[time_index] = 1
+					break
 
 	return measure
 
@@ -107,8 +121,8 @@ def aggregateDataDQ(args):
 	measure_dq2 = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
 	measure_dq3 = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
 	time = [calendar.timegm(k.timetuple()) for k in ar]
-	for time_index in range(0,len(time_val)-1):
-		for idx, t in enumerate(time):
+	for idx, t in enumerate(time):
+		for time_index in range(0,len(time_val)-1):
 			if t >= time_val[time_index] and t < time_val[time_index+1]:
 				if not numpy.isnan(measure[time_index]):
 					measure[time_index] += 1
@@ -120,6 +134,7 @@ def aggregateDataDQ(args):
 					measure_dq1[time_index] = dq1[idx]
 					measure_dq2[time_index] = dq2[idx]
 					measure_dq3[time_index] = dq3[idx]
+				break
 
 	measure_dq1 = numpy.divide(measure_dq1, measure, out=numpy.full_like(measure,numpy.nan))
 	measure_dq2 = numpy.divide(measure_dq2, measure, out=numpy.full_like(measure,numpy.nan))
