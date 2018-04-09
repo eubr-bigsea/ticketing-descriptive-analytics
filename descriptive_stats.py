@@ -552,6 +552,7 @@ def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid
 
 	if len(cubePid) == 4:
 		#Apply data quality filters
+		print("Apply Data Quality Filters")		
 		if logFlag == True:
 			frame = inspect.getframeinfo(inspect.currentframe())
 			start_time = timeit.default_timer()
@@ -581,20 +582,6 @@ def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid
 			logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 	else:
 		aggregatedCube = historicalCube
-
-	if procType == "busStops":
-		#Filter occurences with value set to zero
-		if logFlag == True:
-			frame = inspect.getframeinfo(inspect.currentframe())
-			start_time = timeit.default_timer()
-		aggregatedNewCube = aggregatedCube.apply(query="oph_predicate('oph_float','oph_float',measure,'x-0.1','>0','x','NaN')", ncores=singleNcores)
-		if aggregated == False:
-			aggregatedCube.delete()
-		aggregatedCube = aggregatedNewCube
-		if logFlag == True:
-			end_time = timeit.default_timer() - start_time
-			logging.debug('[%s] [%s - %s] APPLY ZERO FILTER execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
-
 
 	return (aggregatedCube, endDate, startDate)
 

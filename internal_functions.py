@@ -68,20 +68,16 @@ def internalExtractFromEMFile(inputFolder, inputName, columnList):
 
 	inputFile = os.path.join(inputFolder, inputName)
 	if os.path.isfile(inputFile):
-		inFilename, inFileExt = os.path.splitext(inputFile)
-		if inFileExt == '.csv':
-			print("Extract from \"" + inputName + "\"")
-			#Parse text to remove all empty lines
-			with open(inputFile, 'r') as f:
-				#Extract date from file name
-				filedate = (os.path.basename(inputFile)).split('-')[0]
-				filedate = datetime.strptime(filedate, '%Y_%m_%d').strftime('%d/%m/%y')
-				#Convert from CSV to Pandas dataframe
-				newData = pandas.read_csv(f, skip_blank_lines = True, skipinitialspace=True, header=None, names = ['route', 'tripNum', 'shapeId', 'shapeSequence', 'shapeLat', 'shapeLon', 'distanceTravelledShape', 'busCode', 'gpsPointId', 'gpsLat', 'gpsLon', 'distanceToShapePoint', 'timestamp', 'stopPointId', 'problem', 'numberTickets'], usecols = columnList, na_values = '-')
-				newData = newData[newData.stopPointId.notnull() & newData.timestamp.notnull() & newData.numberTickets.notnull()]
-				newData.timestamp = pandas.to_datetime(filedate + " " + newData.timestamp, format='%d/%m/%y %H:%M:%S')
+		print("Extract from \"" + inputName + "\"")
+		#Parse text to remove all empty lines
+		with open(inputFile, 'r') as f:
+			#Convert from CSV to Pandas dataframe
+			newData = pandas.read_csv(f, skip_blank_lines = True, skipinitialspace=True, usecols = columnList, na_values = '-')
+			newData = newData[newData.stopPointId.notnull() & newData.timestamp.notnull() & newData.cardTimestamp.notnull()]
+			#Build full date time
+			newData.timestamp = pandas.to_datetime(newData.date + " " + newData.timestamp, format='%Y_%m_%d %H:%M:%S')
 
-			return newData
+		return newData
 
 	return None
 
@@ -146,7 +142,7 @@ def internalTransformDQ(sub_x, sub_y, sub_times, sub_dq1, sub_dq2, sub_dq3, x, y
 
 	return [measure, measure_dq1, measure_dq2, measure_dq3]
 
-def internalEMTransform(sub_x, sub_y, sub_times, sub_m, x, y, time_val):
+def internalEMTransform(sub_x, sub_y, sub_times, x, y, time_val):
 	#We assume the function will work on a subset of continuos rows
 	from bisect import bisect_left
 	first_x_index = (bisect_left(x, sub_x[0]))
@@ -158,7 +154,7 @@ def internalEMTransform(sub_x, sub_y, sub_times, sub_m, x, y, time_val):
 	for idx, ar in enumerate(sub_times):
 		x_index = (bisect_left(x, sub_x[idx]))
 		y_index = (bisect_left(y, sub_y[idx]))
-		measure[(x_index-first_x_index), y_index, :] = common.aggregateData((ar, time_val, sub_m[idx]))
+		measure[(x_index-first_x_index), y_index, :] = common.aggregateData((ar, time_val))
 
 	return measure
 

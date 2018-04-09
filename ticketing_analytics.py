@@ -258,6 +258,10 @@ if __name__ == "__main__":
 					print("Time required on file: "+ str(final_time))
 
 			if benchmark == True:
+				from pycompss.api.constraint import constraint
+				from pycompss.api.task import task
+				from pycompss.api.parameter import *
+				from pycompss.api.api import compss_wait_on
 				anonymFile[0] = compss_wait_on(anonymFile[0])
 				global_final_time = timeit.default_timer() - global_start_time
 				print("Required time: "+ str(global_final_time))
@@ -320,10 +324,10 @@ if __name__ == "__main__":
 
 						#Build Web Server url
 						outFileRef[f].append(webServerUrl + "/" + outName + ".tar.gz")
+			print time.strftime('%Y-%m-%d %H:%M:%S')
 		else:
 			outFileRef = outFile
 
-		print time.strftime('%Y-%m-%d %H:%M:%S')
 		print("Running step 3 -> Loading")
 
 		if ophLog == True:

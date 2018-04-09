@@ -18,7 +18,7 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag, aggreg
 	elif procType == "passengerUsage":
 		if aggregated == True:
 			if dq_flag == True: 
-				columnList = ['NUMEROCARTAO', 'DATAUTILIZACAO' 'DATANASCIMENTO', 'SEXO', 'COMPLETENESS_MISSING', 'TIMELINESS_DATAUTILIZACAO', 'ASSOCIATION_CONSISTENCY']
+				columnList = ['NUMEROCARTAO', 'DATAUTILIZACAO', 'DATANASCIMENTO', 'SEXO', 'COMPLETENESS_MISSING', 'TIMELINESS_DATAUTILIZACAO', 'ASSOCIATION_CONSISTENCY']
 			else:
 				columnList = ['NUMEROCARTAO', 'DATAUTILIZACAO', 'DATANASCIMENTO', 'SEXO']
 		else:
@@ -27,7 +27,7 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag, aggreg
 			else:
 				columnList = ['NUMEROCARTAO', 'CODLINHA', 'DATAUTILIZACAO', 'DATANASCIMENTO', 'SEXO']
 	elif procType == "busStops":
-		columnList = ['route', 'tripNum', 'busCode', 'timestamp', 'stopPointId', 'numberTickets']
+		columnList = ['route', 'timestamp', 'stopPointId', 'cardTimestamp','date']
 
 	#Loop on input files
 	data = [0 for m in range(0, len(inputFiles))]
@@ -99,10 +99,9 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag, aggreg
 
 		busStop = data['stopPointId'].values.flatten('F')
 		line = data['route'].values.flatten('F')
-		time = data['timestamp'].values.flatten('F')
-		passengers = data['numberTickets'].values.flatten('F')
+		time = pandas.to_datetime(data['timestamp'].values.flatten('F'), format='%d/%m/%y %H:%M:%S,%f')
 
-		outputData = [busStop, line, time, passengers]
+		outputData = [busStop, line, time]
 	else:
 		raise RuntimeError("Type of processing not recognized")
 
@@ -272,14 +271,18 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode, aggreg
 			from pycompss.api.api import compss_wait_on
 			results = compss_wait_on(results)
 			if dq1 is not None and dq2 is not None and dq3 is not None:
-				res = results[:]
-				for i in range(len(res)):
-					results[i] = res[i][0]
-					results_dq1[i] = res[i][1]
-					results_dq2[i] = res[i][2]
-					results_dq3[i] = res[i][3]
+				results_metric = [0 for i in range(0, int(threadNum))]
+				for i in range(len(results)):
+					results_metric[i] = results[i][0]
+					results_dq1[i] = results[i][1]
+					results_dq2[i] = results[i][2]
+					results_dq3[i] = results[i][3]
+				del results
+				results = results_metric
 
 		del sub_x, sub_y, sub_times
+		if dq1 is not None and dq2 is not None and dq3 is not None:
+			del sub_dq1, sub_dq2, sub_dq3
 
 		resultList = []
 		for r in results:
@@ -304,8 +307,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode, aggreg
 
 			del resultList, results_dq1, results_dq2, results_dq3
 
-		import gc
-		gc.collect()
+		#import gc
+		#gc.collect()
 
 		#Create NetCDF file
 		start_time = datetime.datetime.strptime(datetime.datetime.utcfromtimestamp(time_val[0]).strftime('%Y-%m-%d %H:%M:%S'), "%Y-%m-%d %H:%M:%S")
@@ -484,14 +487,18 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode, aggreg
 			from pycompss.api.api import compss_wait_on
 			results = compss_wait_on(results)
 			if dq1 is not None and dq2 is not None and dq3 is not None:
-				res = results[:]
-				for i in range(len(res)):
-					results[i] = res[i][0]
-					results_dq1[i] = res[i][1]
-					results_dq2[i] = res[i][2]
-					results_dq3[i] = res[i][3]
+				results_metric = [0 for i in range(0, int(threadNum))]
+				for i in range(len(results)):
+					results_metric[i] = results[i][0]
+					results_dq1[i] = results[i][1]
+					results_dq2[i] = results[i][2]
+					results_dq3[i] = results[i][3]
+				del results
+				results = results_metric
 
 		del sub_x, sub_y, sub_times
+		if dq1 is not None and dq2 is not None and dq3 is not None:
+			del sub_dq1, sub_dq2, sub_dq3
 
 		resultList = []
 		for r in results:
@@ -561,7 +568,6 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode, aggreg
 		x = data[0]
 		y = data[1]
 		t = data[2]
-		m = data[3]
 
 		diff_y = [y[i] != y[i+1] for i in range(0,len(y)-1)]
 		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
@@ -570,7 +576,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode, aggreg
 		#Split time array based on external dimensions
 		records_split = numpy.where(diff)[0]+1
 		sub_times = numpy.split(t, records_split)
-		sub_m = numpy.split(m, records_split)
+
 		#Add index for first element
 		records_split = numpy.insert(records_split,0,0)
 		sub_x = numpy.take(x, records_split)
@@ -637,14 +643,12 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode, aggreg
 						break
 
 			sub_times = numpy.array_split(sub_times, splits)
-			sub_m = numpy.array_split(sub_m, splits)
 			sub_x = numpy.array_split(sub_x, splits)
 			sub_y = numpy.array_split(sub_y, splits)
 			threadNum = len(splits) if len(splits) < multiProcesses else multiProcesses
 			del partitions, splits
 		else:
 			sub_times = [sub_times]
-			sub_m = [sub_m]
 			sub_x = [sub_x]
 			sub_y = [sub_y]
 			threadNum = 1
@@ -663,10 +667,10 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode, aggreg
 		for i in range(0, int(threadNum)):
 			if mode == 'compss':
 				from compss_functions import compssEMTransform
-				results[i] = compssEMTransform(sub_x[i], sub_y[i], sub_times[i], sub_m[i], x, y, time_val)
+				results[i] = compssEMTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
 			else:
 				from internal_functions import internalEMTransform
-				results[i] = internalEMTransform(sub_x[i], sub_y[i], sub_times[i], sub_m[i], x, y, time_val)
+				results[i] = internalEMTransform(sub_x[i], sub_y[i], sub_times[i], x, y, time_val)
 
 		if mode == 'compss':
 			from pycompss.api.api import compss_wait_on

@@ -86,16 +86,7 @@ def aggregateData(args):
 	measure = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
 	time = [calendar.timegm(k.timetuple()) for k in ar]
 
-	if values is not None:
-		for idx,t in enumerate(time):
-			for time_index in range(0,len(time_val)-1):
-				if t >= time_val[time_index] and t < time_val[time_index+1]:
-					if not numpy.isnan(measure[time_index]):
-						measure[time_index] += values[idx]
-					else:
-						measure[time_index] = values[idx]
-					break
-	else:
+	if values is None:
 		for idx,t in enumerate(time):
 			for time_index in range(0,len(time_val)-1):
 				if t >= time_val[time_index] and t < time_val[time_index+1]:
@@ -103,6 +94,15 @@ def aggregateData(args):
 						measure[time_index] += 1
 					else:
 						measure[time_index] = 1
+					break
+	else:
+		for idx,t in enumerate(time):
+			for time_index in range(0,len(time_val)-1):
+				if t >= time_val[time_index] and t < time_val[time_index+1]:
+					if not numpy.isnan(measure[time_index]):
+						measure[time_index] += values[idx]
+					else:
+						measure[time_index] = values[idx]
 					break
 
 	return measure
@@ -367,7 +367,7 @@ def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure, m
 	line_var = outnc.createVariable('cod_linha', numpy.int64, ('cod_linha',))
 	vehicle_var = outnc.createVariable('cod_veiculo', numpy.int64, ('cod_veiculo',))
 
-	measure_var = outnc.createVariable(measure_name, numpy.float32, ('cod_linha','cod_veiculo','time',), fill_value='NaN')
+	measure_var = outnc.createVariable(measure_name, numpy.float32, ('cod_linha','cod_veiculo','time',), fill_value=numpy.nan)
 
 	#Set metadata
 	time_var.units = 'hours since 2015-1-1 00:00:00'
@@ -381,7 +381,7 @@ def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure, m
 
 	measure_var.standard_name = measure_name
 	measure_var.long_name = "Passenger count"
-	measure_var.missing_value = "NaN"
+	measure_var.missing_value = numpy.nan
 
 	time_var[:] = netCDF4.date2num(times, units = time_var.units, calendar = time_var.calendar)
 	line_var[:] = [convertASCIItoNum(str(t)) for t in cod_linha]
@@ -406,7 +406,7 @@ def createNetCDFFileEMBus(filename, bus_stop, cod_linha, times, measure, measure
 	busStop_var = outnc.createVariable('bus_stop', numpy.int64, ('bus_stop',))
 	line_var = outnc.createVariable('cod_linha', numpy.int64, ('cod_linha',))
 
-	measure_var = outnc.createVariable(measure_name, numpy.float32, ('bus_stop','cod_linha','time',), fill_value='NaN')
+	measure_var = outnc.createVariable(measure_name, numpy.float32, ('bus_stop','cod_linha','time',), fill_value=numpy.nan)
 
 	#Set metadata
 	time_var.units = 'hours since 2015-1-1 00:00:00'
@@ -420,7 +420,7 @@ def createNetCDFFileEMBus(filename, bus_stop, cod_linha, times, measure, measure
 
 	measure_var.standard_name = measure_name
 	measure_var.long_name = "Passenger count"
-	measure_var.missing_value = "NaN"
+	measure_var.missing_value = numpy.nan
 
 	time_var[:] = netCDF4.date2num(times, units = time_var.units, calendar = time_var.calendar)
 	busStop_var[:] = [int(t) for t in bus_stop]
@@ -447,7 +447,7 @@ def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, me
 	passenger_var = outnc.createVariable('cod_passenger', numpy.int64, ('cod_passenger',))
 
 	if cod_linha is not None:
-		measure_var = outnc.createVariable(measure_name, numpy.float32, ('time','cod_linha','cod_passenger',), fill_value='NaN', chunksizes=(int(numpy.ceil(len(times)/10.0)), len(cod_linha), len(cod_passenger)))
+		measure_var = outnc.createVariable(measure_name, numpy.float32, ('time','cod_linha','cod_passenger',), fill_value=numpy.nan, chunksizes=(int(numpy.ceil(len(times)/10.0)), len(cod_linha), len(cod_passenger)))
 	else:
 		measure_var = outnc.createVariable(measure_name, numpy.float32, ('time','cod_passenger',), fill_value='NaN')
 
@@ -464,7 +464,7 @@ def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, me
 
 	measure_var.standard_name = measure_name
 	measure_var.long_name = "Bus usage count"
-	measure_var.missing_value = "NaN"
+	measure_var.missing_value = numpy.nan
 
 	#Transpose matrix
 	if cod_linha is not None:
