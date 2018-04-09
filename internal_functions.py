@@ -93,11 +93,17 @@ def internalTransform(sub_x, sub_y, sub_times, x, y, time_val):
 
 	x_len = last_x_index - first_x_index + 1
 
-	measure = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
-	for idx, ar in enumerate(sub_times):
-		x_index = (bisect_left(x, sub_x[idx]))
-		y_index = (bisect_left(y, sub_y[idx]))
-		measure[(x_index-first_x_index), y_index, :] = common.aggregateData((ar, time_val))
+	if y is not None: 
+		measure = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
+		for idx, ar in enumerate(sub_times):
+			x_index = (bisect_left(x, sub_x[idx]))
+			y_index = (bisect_left(y, sub_y[idx]))
+			measure[(x_index-first_x_index), y_index, :] = common.aggregateData((ar, time_val))
+	else:
+		measure = numpy.full([x_len,len(time_val)-1],numpy.nan, dtype=numpy.float32)
+		for idx, ar in enumerate(sub_times):
+			x_index = (bisect_left(x, sub_x[idx]))
+			measure[(x_index-first_x_index), :] = common.aggregateData((ar, time_val))
 
 	return measure
 
@@ -110,19 +116,33 @@ def internalTransformDQ(sub_x, sub_y, sub_times, sub_dq1, sub_dq2, sub_dq3, x, y
 
 	x_len = last_x_index - first_x_index + 1
 
-	measure = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
-	measure_dq1 = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
-	measure_dq2 = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
-	measure_dq3 = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
-	for idx, ar in enumerate(sub_times):
-		x_index = (bisect_left(x, sub_x[idx]))
-		y_index = (bisect_left(y, sub_y[idx]))
+	if y is not None: 
+		measure = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
+		measure_dq1 = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
+		measure_dq2 = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
+		measure_dq3 = numpy.full([x_len,len(y),len(time_val)-1],numpy.nan, dtype=numpy.float32)
+		for idx, ar in enumerate(sub_times):
+			x_index = (bisect_left(x, sub_x[idx]))
+			y_index = (bisect_left(y, sub_y[idx]))
 
-		result = common.aggregateDataDQ((ar, time_val, sub_dq1[idx], sub_dq2[idx], sub_dq3[idx]))
-		measure[(x_index-first_x_index), y_index, :] = result[0]
-		measure_dq1[(x_index-first_x_index), y_index, :] = result[1]
-		measure_dq2[(x_index-first_x_index), y_index, :] = result[2]
-		measure_dq3[(x_index-first_x_index), y_index, :] = result[3]
+			result = common.aggregateDataDQ((ar, time_val, sub_dq1[idx], sub_dq2[idx], sub_dq3[idx]))
+			measure[(x_index-first_x_index), y_index, :] = result[0]
+			measure_dq1[(x_index-first_x_index), y_index, :] = result[1]
+			measure_dq2[(x_index-first_x_index), y_index, :] = result[2]
+			measure_dq3[(x_index-first_x_index), y_index, :] = result[3]
+	else:
+		measure = numpy.full([x_len,len(time_val)-1],numpy.nan, dtype=numpy.float32)
+		measure_dq1 = numpy.full([x_len,len(time_val)-1],numpy.nan, dtype=numpy.float32)
+		measure_dq2 = numpy.full([x_len,len(time_val)-1],numpy.nan, dtype=numpy.float32)
+		measure_dq3 = numpy.full([x_len,len(time_val)-1],numpy.nan, dtype=numpy.float32)
+		for idx, ar in enumerate(sub_times):
+			x_index = (bisect_left(x, sub_x[idx]))
+
+			result = common.aggregateDataDQ((ar, time_val, sub_dq1[idx], sub_dq2[idx], sub_dq3[idx]))
+			measure[(x_index-first_x_index), :] = result[0]
+			measure_dq1[(x_index-first_x_index), :] = result[1]
+			measure_dq2[(x_index-first_x_index), :] = result[2]
+			measure_dq3[(x_index-first_x_index), :] = result[3]
 
 	return [measure, measure_dq1, measure_dq2, measure_dq3]
 

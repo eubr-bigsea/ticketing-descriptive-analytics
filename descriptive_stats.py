@@ -488,7 +488,7 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 	return outFile
 
 
-def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid, dq_filters, logFlag):
+def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid, dq_filters, logFlag, aggregated):
 
 	if procType == "busUsage":
 		measure = "passengers"
@@ -571,13 +571,16 @@ def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid
 			end_time = timeit.default_timer() - start_time
 			logging.debug('[%s] [%s - %s] APPLY DQ filters execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
-	if logFlag == True:
-		frame = inspect.getframeinfo(inspect.currentframe())
-		start_time = timeit.default_timer()
-	aggregatedCube = historicalCube.aggregate2(concept_level='A',operation='sum',dim=int_dim,ncores=singleNcores)
-	if logFlag == True:
-		end_time = timeit.default_timer() - start_time
-		logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
+	if aggregated == False:
+		if logFlag == True:
+			frame = inspect.getframeinfo(inspect.currentframe())
+			start_time = timeit.default_timer()
+		aggregatedCube = historicalCube.aggregate2(concept_level='A',operation='sum',dim=int_dim,ncores=singleNcores)
+		if logFlag == True:
+			end_time = timeit.default_timer() - start_time
+			logging.debug('[%s] [%s - %s] AGGREGATE execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
+	else:
+		aggregatedCube = historicalCube
 
 	if procType == "busStops":
 		#Filter occurences with value set to zero
@@ -585,7 +588,8 @@ def applyFilters(singleNcores, user, password, hostname, port, procType, cubePid
 			frame = inspect.getframeinfo(inspect.currentframe())
 			start_time = timeit.default_timer()
 		aggregatedNewCube = aggregatedCube.apply(query="oph_predicate('oph_float','oph_float',measure,'x-0.1','>0','x','NaN')", ncores=singleNcores)
-		aggregatedCube.delete()
+		if aggregated == False:
+			aggregatedCube.delete()
 		aggregatedCube = aggregatedNewCube
 		if logFlag == True:
 			end_time = timeit.default_timer() - start_time

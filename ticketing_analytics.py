@@ -21,6 +21,7 @@ if __name__ == "__main__":
 	parser.add_argument('-d','--distribution', default="distributed", help='If the components are distributed or not', choices=['distributed','local'])
 	parser.add_argument('-i','--input_cube', default="None", help='The ID of the input datecube in case no ETL has to be performed. In case of application of DQ filters, 4 cubes must be specified in the format: base cube PID, completeness cube PID, consistency cube PID, timeliness cube PID')
 	parser.add_argument('-q','--dq_filters', default="None", help='Data quality filters in the format: completeness, consistency, timeliness. E.g. 0.5, 0.5, 0.5 or 0.5, None, 0.5')
+	parser.add_argument('-a','--aggregated', default="no", choices=['no','yes'], help='If the cube produced must be pre-aggregated or not')
 	subparsers = parser.add_subparsers(dest="type", help='Type of index to evaluate')
 
 	parserA = subparsers.add_parser('bus-usage',description='Compute Descriptive Analytics with COMPSs and Ophidia on ticketing data')
@@ -54,6 +55,12 @@ if __name__ == "__main__":
 	confFile = args.conf
 	mode = args.mode
 	distribution = args.distribution
+	aggregated = args.aggregated
+
+	if aggregated == "yes":
+		aggregated = True
+	else:
+		aggregated = False
 
 	user = args.username
 	password = args.password
@@ -278,11 +285,11 @@ if __name__ == "__main__":
 
 		data = [None, None, None]
 		if procType == "passengerUsage" or procType == "all":
-			data[0] = etl.extractPhase(anonymFile[0], tmpFolder, "passengerUsage", dq_flag, mode, False)
+			data[0] = etl.extractPhase(anonymFile[0], tmpFolder, "passengerUsage", dq_flag, mode, False, aggregated)
 		if procType == "busUsage" or procType == "all":
-			data[1] = etl.extractPhase(anonymFile[0], tmpFolder, "busUsage", dq_flag, mode, True)
+			data[1] = etl.extractPhase(anonymFile[0], tmpFolder, "busUsage", dq_flag, mode, True, False)
 		if procType == "busStops" or procType == "all":
-			data[2] = etl.extractPhase(anonymFile[1], tmpFolder, "busStops", False, mode, False)
+			data[2] = etl.extractPhase(anonymFile[1], tmpFolder, "busStops", False, mode, False, False)
 
 		print time.strftime('%Y-%m-%d %H:%M:%S')
 		print("Running step 2 -> Transformation")
@@ -290,11 +297,11 @@ if __name__ == "__main__":
 		times = [None, None, None]
 		outFile = [None, None, None]
 		if procType == "passengerUsage" or procType == "all":
-			times[0], outFile[0] = etl.transformToNetCDF(data[0], tmpFolder, multiProcesses, "passengerUsage", mode)
+			times[0], outFile[0] = etl.transformToNetCDF(data[0], tmpFolder, multiProcesses, "passengerUsage", mode, aggregated)
 		if procType == "busUsage" or procType == "all":
-			times[1], outFile[1] = etl.transformToNetCDF(data[1], tmpFolder, multiProcesses, "busUsage", mode)
+			times[1], outFile[1] = etl.transformToNetCDF(data[1], tmpFolder, multiProcesses, "busUsage", mode, False)
 		if procType == "busStops" or procType == "all":
-			times[2], outFile[2] = etl.transformToNetCDF(data[2], tmpFolder, multiProcesses, "busStops", mode)
+			times[2], outFile[2] = etl.transformToNetCDF(data[2], tmpFolder, multiProcesses, "busStops", mode, False)
 
 		print time.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -330,11 +337,11 @@ if __name__ == "__main__":
 		#Import into Ophidia
 		cubePid = [None, None, None]
 		if procType == "passengerUsage" or procType == "all":
-			cubePid[0] = etl.loadOphidia(outFileRef[0], times[0], singleNcores, user, password, hostname, port, "passengerUsage", distribution, ophLog)
+			cubePid[0] = etl.loadOphidia(outFileRef[0], times[0], singleNcores, user, password, hostname, port, "passengerUsage", distribution, ophLog, aggregated)
 		if procType == "busUsage" or procType == "all":
-			cubePid[1] = etl.loadOphidia(outFileRef[1], times[1], singleNcores, user, password, hostname, port, "busUsage", distribution, ophLog)
+			cubePid[1] = etl.loadOphidia(outFileRef[1], times[1], singleNcores, user, password, hostname, port, "busUsage", distribution, ophLog, False)
 		if procType == "busStops" or procType == "all":
-			cubePid[2] = etl.loadOphidia(outFileRef[2], times[2], singleNcores, user, password, hostname, port, "busStops", distribution, ophLog)
+			cubePid[2] = etl.loadOphidia(outFileRef[2], times[2], singleNcores, user, password, hostname, port, "busStops", distribution, ophLog, False)
 
 		print("Ophidia data cube ID: " + str(cubePid[0]))
 		if distribution in "distributed":
@@ -352,7 +359,7 @@ if __name__ == "__main__":
 	print("Running statistics computation")
 
 	if procType == "passengerUsage" or procType == "all":
-		aggregatedCube, endDate, startDate = dstat.applyFilters(singleNcores, user, password, hostname, port, "passengerUsage", cubePid[0], dq_filters, ophLog)
+		aggregatedCube, endDate, startDate = dstat.applyFilters(singleNcores, user, password, hostname, port, "passengerUsage", cubePid[0], dq_filters, ophLog, aggregated)
 		if stats == "all" or stats == "weekly-usage":
 			print("Computing: passenger usage stats for each bus line and week in the time range")
 			outFile = dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "weekly-usage", format, outputFolder, "passengerUsage", mode, ophLog)
@@ -371,7 +378,7 @@ if __name__ == "__main__":
 
 		dstat.removeTempCubes(singleNcores, user, password, hostname, port, ophLog)
 	if procType == "busUsage" or procType == "all":
-		aggregatedCube, endDate, startDate = dstat.applyFilters(singleNcores, user, password, hostname, port, "busUsage", cubePid[1], dq_filters, ophLog)
+		aggregatedCube, endDate, startDate = dstat.applyFilters(singleNcores, user, password, hostname, port, "busUsage", cubePid[1], dq_filters, ophLog, False)
 		if stats == "all" or stats == "weekdaysets-peakhours":
 			print("Computing: number of passenger stats for each hour of group of weekdays")
 			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "weekdaysets-peakhours", format, outputFolder, "busUsage", mode, ophLog)
@@ -424,7 +431,7 @@ if __name__ == "__main__":
 
 		dstat.removeTempCubes(singleNcores, user, password, hostname, port, ophLog)
 	if procType == "busStops" or procType == "all":
-		aggregatedCube, endDate, startDate = dstat.applyFilters(singleNcores, user, password, hostname, port, "busStops", cubePid[2], [None, None, None], ophLog)
+		aggregatedCube, endDate, startDate = dstat.applyFilters(singleNcores, user, password, hostname, port, "busStops", cubePid[2], [None, None, None], ophLog, False)
 		if stats == "all" or stats == "weekdaysets-stops":
 			print("Computing: number of passenger stats for each bus stop and group of weekdays")
 			dstat.computeTicketingStat(parallelNcores, singleNcores, user, password, hostname, port, aggregatedCube, endDate, startDate, "weekdaysets-stops", format, outputFolder, "busStops", mode, ophLog)

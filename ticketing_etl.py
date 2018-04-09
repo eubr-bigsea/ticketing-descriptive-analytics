@@ -7,7 +7,7 @@ from PyOphidia import cube, client
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import common_functions as common
 
-def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag):
+def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag, aggregated):
 
 	#Define list of columns required for processing
 	if procType == "busUsage":
@@ -16,10 +16,16 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag):
 		else:
 			columnList = ['CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO']
 	elif procType == "passengerUsage":
-		if dq_flag == True: 
-			columnList = ['NUMEROCARTAO', 'CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO', 'NUMEROCARTAO', 'DATANASCIMENTO', 'SEXO', 'COMPLETENESS_MISSING', 'TIMELINESS_DATAUTILIZACAO', 'ASSOCIATION_CONSISTENCY']
+		if aggregated == True:
+			if dq_flag == True: 
+				columnList = ['NUMEROCARTAO', 'DATAUTILIZACAO' 'DATANASCIMENTO', 'SEXO', 'COMPLETENESS_MISSING', 'TIMELINESS_DATAUTILIZACAO', 'ASSOCIATION_CONSISTENCY']
+			else:
+				columnList = ['NUMEROCARTAO', 'DATAUTILIZACAO', 'DATANASCIMENTO', 'SEXO']
 		else:
-			columnList = ['NUMEROCARTAO', 'CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO', 'NUMEROCARTAO', 'DATANASCIMENTO', 'SEXO']
+			if dq_flag == True: 
+				columnList = ['NUMEROCARTAO', 'CODLINHA', 'DATAUTILIZACAO', 'DATANASCIMENTO', 'SEXO', 'COMPLETENESS_MISSING', 'TIMELINESS_DATAUTILIZACAO', 'ASSOCIATION_CONSISTENCY']
+			else:
+				columnList = ['NUMEROCARTAO', 'CODLINHA', 'DATAUTILIZACAO', 'DATANASCIMENTO', 'SEXO']
 	elif procType == "busStops":
 		columnList = ['route', 'tripNum', 'busCode', 'timestamp', 'stopPointId', 'numberTickets']
 
@@ -53,9 +59,11 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag):
 		outputData = [line, vehicle, time, completeness, consistency, timeliness]
 
 	elif procType == "passengerUsage":
-		data.sort_values(['NUMEROCARTAO', 'CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO'], ascending=[True, True, True, True], inplace=True)
+		if aggregated == True:
+			data.sort_values(['NUMEROCARTAO', 'DATAUTILIZACAO'], ascending=[True, True], inplace=True)
+		else:
+			data.sort_values(['NUMEROCARTAO', 'CODLINHA', 'DATAUTILIZACAO'], ascending=[True, True, True], inplace=True)
 
-		line = data['CODLINHA'].values.flatten('F')
 		time = pandas.to_datetime(data['DATAUTILIZACAO'].values.flatten('F'), format='%d/%m/%y %H:%M:%S,%f')
 		number = data['NUMEROCARTAO'].values.flatten('F')
 
@@ -80,7 +88,11 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag):
 			consistency = data['ASSOCIATION_CONSISTENCY'].values.flatten('F')
 			timeliness = data['TIMELINESS_DATAUTILIZACAO'].values.flatten('F')
 
-		outputData = [number, line, time, birthDate, gender, completeness, consistency, timeliness]
+		if aggregated == True:
+			outputData = [number, None, time, birthDate, gender, completeness, consistency, timeliness]
+		else:
+			line = data['CODLINHA'].values.flatten('F')
+			outputData = [number, line, time, birthDate, gender, completeness, consistency, timeliness]
 
 	elif procType == "busStops":
 		data.sort_values(['stopPointId', 'route', 'timestamp'], ascending=[True, True, True], inplace=True)
@@ -113,7 +125,7 @@ def extractFromFile(inputFolder, inputName, procType, mode, delFlag, columnList)
 			from internal_functions import internalExtractFromEMFile
 			return internalExtractFromEMFile(inputFolder, inputName, columnList)
 
-def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
+def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode, aggregated):
 
 	if procType == "busUsage":
 		time_period = 3600
@@ -314,7 +326,10 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		time_period = 86400
 
 		x = data[0]
-		y = data[1]
+		if aggregated == True:
+			y = None
+		else:
+			y = data[1]
 		t = data[2]
 		w = data[3]
 		z = data[4]
@@ -322,9 +337,13 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		dq2 = data[6]
 		dq3 = data[7]
 
-		diff_y = [y[i] != y[i+1] for i in range(0,len(y)-1)]
 		diff_x = [x[i] != x[i+1] for i in range(0,len(x)-1)]
-		diff = numpy.logical_or(diff_x, diff_y)
+		if aggregated == False:
+			diff_y = [y[i] != y[i+1] for i in range(0,len(y)-1)]
+			diff = numpy.logical_or(diff_x, diff_y)
+		else:
+			diff_y = None
+			diff = diff_x
 
 		#Split time array based on external dimensions
 		records_split = numpy.where(diff)[0]+1
@@ -336,7 +355,10 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		#Add index for first element
 		records_split = numpy.insert(records_split,0,0)
 		sub_x = numpy.take(x, records_split)
-		sub_y = numpy.take(y, records_split)
+		if aggregated == False:
+			sub_y = numpy.take(y, records_split)
+		else:
+			sub_y = [None for i in range(len(records_split))]
 
 		tLen = len(t)
 		tMin = min(t)
@@ -345,7 +367,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 		del diff, diff_y, t
 
 		x = numpy.unique(x)
-		y = numpy.unique(y)
+		if aggregated == False:
+			y = numpy.unique(y)
 
 		#Define partitions for concurrent execution
 		if int(multiProcesses) > 1:
@@ -400,7 +423,10 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 
 			sub_times = numpy.array_split(sub_times, splits)
 			sub_x = numpy.array_split(sub_x, splits)
-			sub_y = numpy.array_split(sub_y, splits)
+			if aggregated == False:
+				sub_y = numpy.array_split(sub_y, splits)
+			else:
+				sub_y = [None for i in range(len(sub_x))]
 			if dq1 is not None and dq2 is not None and dq3 is not None:
 				sub_dq1 = numpy.array_split(sub_dq1, splits)
 				sub_dq2 = numpy.array_split(sub_dq2, splits)
@@ -669,7 +695,7 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode):
 
 	return times, outputFile
 
-def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, procType, distribution, logFlag):
+def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, procType, distribution, logFlag, aggregated):
 
 	if procType == "busUsage":
 		measure = "passengers"
@@ -752,12 +778,20 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 				pid.append(historicalCube_dq.pid)
 
 	elif procType == "passengerUsage":
-		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
-		pid.append(historicalCube.pid)
-		if len(dq_files) > 0:
-			for i in range(len(dq_files)):
-				historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
-				pid.append(historicalCube_dq.pid)
+		if aggregated == True:
+			historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, exp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+			pid.append(historicalCube.pid)
+			if len(dq_files) > 0:
+				for i in range(len(dq_files)):
+					historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], exp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+					pid.append(historicalCube_dq.pid)
+		else:
+			historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+			pid.append(historicalCube.pid)
+			if len(dq_files) > 0:
+				for i in range(len(dq_files)):
+					historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+					pid.append(historicalCube_dq.pid)
 
 	elif procType == "busStops":
 		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
