@@ -42,11 +42,11 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag, aggreg
 
 	outputData = []
 	if procType == "busUsage":
-		data.sort_values(['CODLINHA', 'CODVEICULO', 'DATAUTILIZACAO'], ascending=[True, True, True], inplace=True)
+		data.sort_values(['CODLINHA', 'CODVEICULO'], ascending=[True, True], inplace=True)
 
 		line = data['CODLINHA'].values.flatten('F')
 		vehicle = data['CODVEICULO'].values.flatten('F')
-		time = pandas.to_datetime(data['DATAUTILIZACAO'].values.flatten('F'), format='%d/%m/%y %H:%M:%S,%f')
+		time = data['DATAUTILIZACAO'].values.flatten('F')
 
 		completeness = None
 		consistency = None
@@ -60,11 +60,11 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag, aggreg
 
 	elif procType == "passengerUsage":
 		if aggregated == True:
-			data.sort_values(['NUMEROCARTAO', 'DATAUTILIZACAO'], ascending=[True, True], inplace=True)
+			data.sort_values(['NUMEROCARTAO'], ascending=[True], inplace=True)
 		else:
-			data.sort_values(['NUMEROCARTAO', 'CODLINHA', 'DATAUTILIZACAO'], ascending=[True, True, True], inplace=True)
+			data.sort_values(['NUMEROCARTAO', 'CODLINHA'], ascending=[True, True], inplace=True)
 
-		time = pandas.to_datetime(data['DATAUTILIZACAO'].values.flatten('F'), format='%d/%m/%y %H:%M:%S,%f')
+		time = data['DATAUTILIZACAO'].values.flatten('F')
 		number = data['NUMEROCARTAO'].values.flatten('F')
 
 		newNumber = numpy.empty([len(number)], dtype=numpy.int64)
@@ -95,11 +95,11 @@ def extractPhase(inputFiles, tmpFolder, procType, dq_flag, mode, delFlag, aggreg
 			outputData = [number, line, time, birthDate, gender, completeness, consistency, timeliness]
 
 	elif procType == "busStops":
-		data.sort_values(['stopPointId', 'route', 'timestamp'], ascending=[True, True, True], inplace=True)
+		data.sort_values(['stopPointId', 'route'], ascending=[True, True], inplace=True)
 
 		busStop = data['stopPointId'].values.flatten('F')
 		line = data['route'].values.flatten('F')
-		time = pandas.to_datetime(data['timestamp'].values.flatten('F'), format='%d/%m/%y %H:%M:%S,%f')
+		time = data['timestamp'].values.flatten('F')
 
 		outputData = [busStop, line, time]
 	else:
@@ -233,8 +233,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode, aggreg
 			threadNum = 1
 
 		#Define time dimension (aggregate on time period)
-		start_date = tMin
-		end_date = tMax
+		start_date = pandas.to_datetime(tMin, format='%d/%m/%y %H:%M:%S,%f')
+		end_date = pandas.to_datetime(tMax, format='%d/%m/%y %H:%M:%S,%f')
 		interval = end_date.date() - start_date.date()
 		start_time = calendar.timegm(start_date.date().timetuple())
 		time_len = (interval.days + 1)*int((24*3600)/time_period)
@@ -449,8 +449,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode, aggreg
 			threadNum = 1
 
 		#Define time dimension (aggregate on time period)
-		start_date = tMin
-		end_date = tMax
+		start_date = pandas.to_datetime(tMin, format='%d/%m/%y %H:%M:%S,%f')
+		end_date = pandas.to_datetime(tMax, format='%d/%m/%y %H:%M:%S,%f')
 		interval = end_date.date() - start_date.date()
 		start_time = calendar.timegm(start_date.date().timetuple())
 		time_len = (interval.days + 1)*int((24*3600)/time_period)
@@ -654,8 +654,8 @@ def transformToNetCDF(data, outputFolder, multiProcesses, procType, mode, aggreg
 			threadNum = 1
 
 		#Define time dimension (aggregate on time period)
-		start_date = tMin
-		end_date = tMax
+		start_date = pandas.to_datetime(tMin, format='%d/%m/%y %H:%M:%S,%f')
+		end_date = pandas.to_datetime(tMax, format='%d/%m/%y %H:%M:%S,%f')
 		interval = end_date.date() - start_date.date()
 		start_time = calendar.timegm(start_date.date().timetuple())
 		time_len = (interval.days + 1)*int((24*3600)/time_period)
@@ -764,7 +764,7 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 		logging.debug('[%s] [%s - %s] SCRIPT execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), str(end_time))
 
 	try:
-		cube.Cube.createcontainer(container='bigsea',dim='cod_passenger|cod_linha|cod_veiculo|bus_stop|time',dim_type='long|long|long|long|double',hierarchy='oph_base|oph_base|oph_base|oph_base|oph_time',display=False,base_time='2015-01-01 00:00:00',calendar='gregorian',units='h')
+		cube.Cube.createcontainer(container='bigsea',dim='cod_passenger|cod_linha|cod_veiculo|bus_stop|time',dim_type='long|long|long|long|double',hierarchy='oph_base|oph_base|oph_base|oph_base|oph_time',display=False,base_time='2017-01-01 00:00:00',calendar='gregorian',units='h')
 	except:
 		pass
 
@@ -774,31 +774,31 @@ def loadOphidia(fileRef, times, singleNcores, user, password, hostname, port, pr
 
 	pid = []
 	if procType == "busUsage":
-		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2017-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 		pid.append(historicalCube.pid)
 		if len(dq_files) > 0:
 			for i in range(len(dq_files)):
-				historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+				historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2017-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 				pid.append(historicalCube_dq.pid)
 
 	elif procType == "passengerUsage":
 		if aggregated == True:
-			historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, exp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+			historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, exp_concept_level=imp_concept_level, import_metadata='no', base_time='2017-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 			pid.append(historicalCube.pid)
 			if len(dq_files) > 0:
 				for i in range(len(dq_files)):
-					historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], exp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+					historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], exp_concept_level=imp_concept_level, import_metadata='no', base_time='2017-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 					pid.append(historicalCube_dq.pid)
 		else:
-			historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+			historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2017-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile , display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 			pid.append(historicalCube.pid)
 			if len(dq_files) > 0:
 				for i in range(len(dq_files)):
-					historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+					historicalCube_dq = cube.Cube.importnc(container='bigsea', measure=dq_measures[i], exp_concept_level=imp_concept_level+'|c', import_metadata='no', base_time='2017-01-01 00:00:00', calendar='gregorian', units='h', src_path=dq_files[i], display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 					pid.append(historicalCube_dq.pid)
 
 	elif procType == "busStops":
-		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2015-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
+		historicalCube = cube.Cube.importnc(container='bigsea', measure=measure, imp_dim='time', imp_concept_level=imp_concept_level, import_metadata='no', base_time='2017-01-01 00:00:00', calendar='gregorian', units='h', src_path=inputFile, display=False, ncores=singleNcores, ioserver="ophidiaio_memory")
 		pid.append(historicalCube.pid)
 
 	if logFlag == True:

@@ -1,5 +1,5 @@
-import os, shutil, subprocess, json, csv, calendar, datetime
-import numpy, netCDF4
+import os, shutil, subprocess, json, csv, calendar, datetime, time
+import numpy, netCDF4, pandas
 
 #Global lists of metrics being computed
 METRICS_BUS = ['MIN', 'MAX', 'AVG', 'SUM']
@@ -75,7 +75,6 @@ def jsonLine2json(filename):
 
 	return outFileName
 
-
 def aggregateData(args):
 	ar = args[0]
 	time_val = args[1]
@@ -84,12 +83,15 @@ def aggregateData(args):
 	else:
 		values = None
 	measure = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
-	time = [calendar.timegm(k.timetuple()) for k in ar]
+	time = (ar.astype(numpy.int64)/1000000000).astype(numpy.int32)
+	time = numpy.sort(time, axis=None, kind='heapsort')
 
+	start_index = 0
 	if values is None:
 		for idx,t in enumerate(time):
-			for time_index in range(0,len(time_val)-1):
+			for time_index in range(start_index,len(time_val)-1):
 				if t >= time_val[time_index] and t < time_val[time_index+1]:
+					start_index = time_index
 					if not numpy.isnan(measure[time_index]):
 						measure[time_index] += 1
 					else:
@@ -97,8 +99,9 @@ def aggregateData(args):
 					break
 	else:
 		for idx,t in enumerate(time):
-			for time_index in range(0,len(time_val)-1):
+			for time_index in range(start_index,len(time_val)-1):
 				if t >= time_val[time_index] and t < time_val[time_index+1]:
+					start_index = time_index
 					if not numpy.isnan(measure[time_index]):
 						measure[time_index] += values[idx]
 					else:
@@ -120,10 +123,14 @@ def aggregateDataDQ(args):
 	measure_dq1 = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
 	measure_dq2 = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
 	measure_dq3 = numpy.full([len(time_val)-1],numpy.nan, dtype=numpy.float32)
-	time = [calendar.timegm(k.timetuple()) for k in ar]
+	time = (ar.astype(numpy.int64)/1000000000).astype(numpy.int32)
+	time = numpy.sort(time, axis=None, kind='heapsort')
+
+	start_index = 0
 	for idx, t in enumerate(time):
-		for time_index in range(0,len(time_val)-1):
+		for time_index in range(start_index,len(time_val)-1):
 			if t >= time_val[time_index] and t < time_val[time_index+1]:
+				start_index = time_index
 				if not numpy.isnan(measure[time_index]):
 					measure[time_index] += 1
 					measure_dq1[time_index] += dq1[idx]
@@ -349,7 +356,7 @@ def buildSubsetFilter(startDate, numDays, day):
 		if d.isoweekday() == day:
 			dayStart = d.replace(hour=00, minute=1)
 			dayEnd = dayStart + datetime.timedelta(days=1)
-			filterList = filterList + "{0:.3f}".format(netCDF4.date2num(dayStart, units = 'hours since 2015-1-1 00:00:00', calendar = 'gregorian')) + ":" + "{0:.3f}".format(netCDF4.date2num(dayEnd, units = 'hours since 2015-1-1 00:00:00', calendar = 'gregorian')) + ","
+			filterList = filterList + "{0:.0f}".format(netCDF4.date2num(dayStart, units = 'hours since 2017-1-1 00:00:00', calendar = 'gregorian')) + ":" + "{0:.0f}".format(netCDF4.date2num(dayEnd, units = 'hours since 2017-1-1 00:00:00', calendar = 'gregorian')) + ","
 
 	if not filterList:
 		return None
@@ -370,7 +377,7 @@ def createNetCDFFileBusUsage(filename, cod_linha, cod_veiculo, times, measure, m
 	measure_var = outnc.createVariable(measure_name, numpy.float32, ('cod_linha','cod_veiculo','time',), fill_value=numpy.nan)
 
 	#Set metadata
-	time_var.units = 'hours since 2015-1-1 00:00:00'
+	time_var.units = 'hours since 2017-1-1 00:00:00'
 	time_var.calendar = 'gregorian'
 	time_var.standard_name = 'time'
 	time_var.long_name = 'time'
@@ -409,7 +416,7 @@ def createNetCDFFileEMBus(filename, bus_stop, cod_linha, times, measure, measure
 	measure_var = outnc.createVariable(measure_name, numpy.float32, ('bus_stop','cod_linha','time',), fill_value=numpy.nan)
 
 	#Set metadata
-	time_var.units = 'hours since 2015-1-1 00:00:00'
+	time_var.units = 'hours since 2017-1-1 00:00:00'
 	time_var.calendar = 'gregorian'
 	time_var.standard_name = 'time'
 	time_var.long_name = 'time'
@@ -452,7 +459,7 @@ def createNetCDFFilePassengerUsage(filename, cod_passenger, cod_linha, times, me
 		measure_var = outnc.createVariable(measure_name, numpy.float32, ('time','cod_passenger',), fill_value='NaN')
 
 	#Set metadata
-	time_var.units = 'hours since 2015-1-1 00:00:00'
+	time_var.units = 'hours since 2017-1-1 00:00:00'
 	time_var.calendar = 'gregorian'
 	time_var.standard_name = 'time'
 	time_var.long_name = 'time'
