@@ -276,7 +276,15 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 		if logFlag == True:
 			frame = inspect.getframeinfo(inspect.currentframe())
 			start_time = timeit.default_timer()
-		subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)
+		if len(filter_list) > 2:
+			split = filter_list.find(',',int(len(filter_list)/2))
+			firstFilter = filter_list[:split]
+			secondFilter = filter_list[split+1:]
+			subsettedCube1 = startCube.subset2(subset_dims='time',subset_filter=firstFilter,time_filter='no',ncores=singleNcores)	
+			subsettedCube2 = startCube.subset2(subset_dims='time',subset_filter=secondFilter,time_filter='no',ncores=singleNcores)	
+			subsettedCube = cube.Cube.mergecubes(cubes=subsettedCube1.pid+'|'+subsettedCube2.pid, ncores=singleNcores,mode='a')
+		else:
+			subsettedCube = startCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)	
 		if logFlag == True:
 			end_time = timeit.default_timer() - start_time
 			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
@@ -359,7 +367,15 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 		#Extract relevant days
 		if logFlag == True:
 			start_time = timeit.default_timer()
-		subsettedCube = reducedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)
+		if len(filter_list) > 2:
+			split = filter_list.find(',',int(len(filter_list)/2))
+			firstFilter = filter_list[:split]
+			secondFilter = filter_list[split+1:]
+			subsettedCube1 = reducedCube.subset2(subset_dims='time',subset_filter=firstFilter,time_filter='no',ncores=singleNcores)	
+			subsettedCube2 = reducedCube.subset2(subset_dims='time',subset_filter=secondFilter,time_filter='no',ncores=singleNcores)	
+			subsettedCube = cube.Cube.mergecubes(cubes=subsettedCube1.pid+'|'+subsettedCube2.pid, ncores=singleNcores,mode='a')
+		else:
+			subsettedCube = reducedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)
 		if logFlag == True:
 			end_time = timeit.default_timer() - start_time
 			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))
@@ -447,7 +463,15 @@ def peakhourAggregation(parallelNcores, singleNcores, aggregation, startCube, st
 		#Extract relevant days
 		if logFlag == True:
 			start_time = timeit.default_timer()
-		subsettedCube = aggregatedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)
+		if len(filter_list) > 900:
+			split = filter_list.find(',',int(len(filter_list)/2))
+			firstFilter = filter_list[:split]
+			secondFilter = filter_list[split+1:]
+			subsettedCube1 = aggregatedCube.subset2(subset_dims='time',subset_filter=firstFilter,time_filter='no',ncores=singleNcores)	
+			subsettedCube2 = aggregatedCube.subset2(subset_dims='time',subset_filter=secondFilter,time_filter='no',ncores=singleNcores)	
+			subsettedCube = cube.Cube.mergecubes(cubes=subsettedCube1.pid+'|'+subsettedCube2.pid, ncores=singleNcores,mode='a')
+		else:
+			subsettedCube = aggregatedCube.subset2(subset_dims='time',subset_filter=filter_list,time_filter='no',ncores=singleNcores)
 		if logFlag == True:
 			end_time = timeit.default_timer() - start_time
 			logging.debug('[%s] [%s - %s] SUBSET %s execution time: %s [s]', str(datetime.datetime.now()), str(os.path.basename(frame.filename)), str(frame.lineno), day, str(end_time))

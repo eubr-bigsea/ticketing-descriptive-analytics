@@ -111,6 +111,7 @@ if __name__ == "__main__":
 			dq_flag = False
 		else:
 			cube_list = input_cubes.split(",")
+		input_cubes = True
 
 	if confFile == "config.ini":
 		configFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.ini")
@@ -229,7 +230,13 @@ if __name__ == "__main__":
 
 	if input_cubes == True:
 		print("No ETL performed")
-		cubePid = cube_list
+		cubePid = [None, None, None]
+		if procType == "passengerUsage":
+			cubePid[0] = cube_list
+		if procType == "busUsage":
+			cubePid[1] = cube_list
+		if procType == "busStops":
+			cubePid[2] = cube_list
 		print("Ophidia data cube ID: " + str(cubePid[0]))
 
 	else:
