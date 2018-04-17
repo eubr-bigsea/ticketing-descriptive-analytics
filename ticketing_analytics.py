@@ -233,11 +233,13 @@ if __name__ == "__main__":
 		cubePid = [None, None, None]
 		if procType == "passengerUsage":
 			cubePid[0] = cube_list
+			print("Ophidia data cube ID: " + str(cubePid[0]))
 		if procType == "busUsage":
 			cubePid[1] = cube_list
+			print("Ophidia data cube ID: " + str(cubePid[1]))
 		if procType == "busStops":
 			cubePid[2] = cube_list
-		print("Ophidia data cube ID: " + str(cubePid[0]))
+			print("Ophidia data cube ID: " + str(cubePid[2]))
 
 	else:
 		#Create tmp folder

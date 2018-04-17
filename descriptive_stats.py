@@ -276,7 +276,7 @@ def weekdayLinesAggregation(parallelNcores, singleNcores, aggregation, startCube
 		if logFlag == True:
 			frame = inspect.getframeinfo(inspect.currentframe())
 			start_time = timeit.default_timer()
-		if len(filter_list) > 2:
+		if len(filter_list) > 900:
 			split = filter_list.find(',',int(len(filter_list)/2))
 			firstFilter = filter_list[:split]
 			secondFilter = filter_list[split+1:]
@@ -367,7 +367,7 @@ def weekdayLinesTotalAggregation(parallelNcores, singleNcores, aggregation, star
 		#Extract relevant days
 		if logFlag == True:
 			start_time = timeit.default_timer()
-		if len(filter_list) > 2:
+		if len(filter_list) > 900:
 			split = filter_list.find(',',int(len(filter_list)/2))
 			firstFilter = filter_list[:split]
 			secondFilter = filter_list[split+1:]
